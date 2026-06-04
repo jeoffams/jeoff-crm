@@ -1,4 +1,3 @@
-// v2 — currency symbols + notes search
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { db, supabase } from "./supabase.js";
 
