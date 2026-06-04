@@ -358,8 +358,8 @@ const Overview = ({ warm, newL, ag, br, fl, ct }) => {
   const stale = warm.filter((w) => daysUntil(w.nextActionDate) < -7 && w.stage !== "Won" && w.stage !== "Paused");
   const pipeData = ["Radar","Nurturing","Conversation","Proposal","Won"].map((s) => ({ name:s, v:warm.filter((w) => w.stage===s).length }));
   const allJobs = [...fl, ...ct];
-  const appliedJobs = allJobs.filter((j) => !["New","Researching"].includes(j.status||"New"));
-  const appData = ["Applied","No Response","Conversation","Offer","Passed","Rejected"].map((s) => ({ name:s, v:appliedJobs.filter((j) => j.status===s).length })).filter((d) => d.v>0);
+  const appliedJobs = allJobs.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
+  const appData = ["Applied","No Response","Conversation","Offer","Rejected"].map((s) => ({ name:s, v:appliedJobs.filter((j) => j.status===s).length })).filter((d) => d.v>0);
   const newJobs = fl.filter((j) => j.isNew).length + ct.filter((j) => j.isNew).length;
   return (
     <div style={{ padding:"16px 20px" }}>
@@ -866,7 +866,7 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass }) => {
         <span style={{ fontSize:11, fontWeight:600, color: j.priority==="High" ? R : j.priority==="Medium" ? "#d97706" : C.muted }}>{j.priority}</span>
       </td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-        <Sel value={j.status||"New"} opts={["New","Researching","Applied","No Response","Conversation","Offer","Passed","Rejected"]} onChange={(v) => onUpdate(j.id,"status",v)} cf={jobCol} />
+        <Sel value={j.status||"New"} opts={["New","Researching","Applied","No Response","Conversation","Offer","Rejected"]} onChange={(v) => onUpdate(j.id,"status",v)} cf={jobCol} />
       </td>
       <td style={{ padding:"8px 10px", minWidth:180, verticalAlign:"top" }}><EditCell value={j.notes} onSave={(v) => onUpdate(j.id,"notes",v)} multi /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
@@ -988,34 +988,12 @@ export default function App() {
 
   const autoLinkContact = useCallback((lead) => {
     if (!lead?.company || !lead?.name) return;
-    const comp = lead.company.toLowerCase().trim();
-    const name = lead.name;
-    setAg(prev => {
-      const next = prev.map(a => {
-        if (a.contact && a.contact !== 'TBD' && a.contact !== '-' && a.contact !== '') return a;
-        const aN = (a.name || '').toLowerCase().trim();
-        const words = aN.split(/[\s,./&+()-]+/).filter(w => w.length > 2);
-        const match = aN === comp || aN.includes(comp) || comp.includes(aN) || words.some(w => comp.includes(w));
-        if (!match) return a;
-        return { ...a, contact: name, status: a.status === 'Find contact' ? 'New Lead added' : a.status };
-      });
-      const changed = JSON.stringify(next) !== JSON.stringify(prev);
-      if (changed) db.set('ja', next);
-      return changed ? next : prev;
-    });
-    setBr(prev => {
-      const next = prev.map(b => {
-        if (b.contactToFind && b.contactToFind !== 'TBD' && b.contactToFind !== '-' && b.contactToFind !== '') return b;
-        const bN = (b.brand || '').toLowerCase().trim();
-        const words = bN.split(/\s+/).filter(w => w.length > 2);
-        const match = bN === comp || bN.includes(comp) || comp.includes(bN) || words.some(w => comp.includes(w));
-        if (!match) return b;
-        return { ...b, contactToFind: name };
-      });
-      const changed = JSON.stringify(next) !== JSON.stringify(prev);
-      if (changed) db.set('jb', next);
-      return changed ? next : prev;
-    });
+    const comp=lead.company.toLowerCase().trim(), company=lead.company, name=lead.name, tier=lead.tier||'';
+    const newId=()=>Math.random().toString(36).slice(2,9);
+    const cm=(s)=>{const n=(s||'').toLowerCase().trim(),ws=n.split(/[\s,./&+()-]+/).filter(w=>w.length>2);return n===comp||n.includes(comp)||comp.includes(n)||ws.some(w=>comp.includes(w));};
+    const isAgency=tier.includes('Agency')||tier.includes('Studio'), isBrand=tier.includes('Brand');
+    if(isAgency){setAg(prev=>{const ex=prev.find(a=>cm(a.name));if(ex){if(ex.contact&&ex.contact!=='TBD'&&ex.contact!==''&&ex.contact!=='-')return prev;const next=prev.map(a=>a.id===ex.id?{...a,contact:name,status:a.status==='Find contact'?'New Lead added':a.status}:a);db.set('ja',next);return next;}const entry={id:newId(),name:company,contact:name,email:lead.email||'',website:'',location:'Amsterdam',priority:'3/5',status:'New Lead added',notes:`Contact added from Leads: ${name}.`};const next=[...prev,entry];db.set('ja',next);setMsg(`✓ Added ${company} to Agencies — ${name} as contact.`);return next;});}
+    if(isBrand){setBr(prev=>{const ex=prev.find(b=>cm(b.brand));if(ex){if(ex.contactToFind&&ex.contactToFind!=='TBD'&&ex.contactToFind!==''&&ex.contactToFind!=='-')return prev;const next=prev.map(b=>b.id===ex.id?{...b,contactToFind:name}:b);db.set('jb',next);return next;}const entry={id:newId(),brand:company,contactToFind:name,sector:'',warmIn:'Yes',priority:'3/5',status:'In Warm Leads',notes:`Contact added from Leads: ${name}.`};const next=[...prev,entry];db.set('jb',next);setMsg(`✓ Added ${company} to Brands — ${name} as contact.`);return next;});}
   }, []);
   const initialLoad    = useRef(true);
   const searchRef = useRef(null);
