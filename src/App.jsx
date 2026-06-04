@@ -18,7 +18,8 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 // 1. LinkedIn JOBS: https://linkedin.com/jobs/search/?keywords=[term]&location=Amsterdam%2C+North+Holland%2C+Netherlands&geoId=102011674&f_TPR=r604800&sortBy=DD
 //    Terms to search: "creative producer", "executive producer", "content producer", "producent", "VFX producer", "project manager productie"
 // 2. LinkedIn POSTS: https://linkedin.com/search/results/content/?keywords=[term]&datePosted=past-week
-//    Terms: "looking for producer amsterdam", "zoeken producent amsterdam", "freelance CP gezocht", "need a producer"
+//    Terms: "looking for producer amsterdam", "zoeken producent amsterdam", "freelance CP gezocht", "need a producer",
+//           "wij zoeken producent", "zoeken project manager", "freelance project manager gezocht", "wij zoeken een sr"
 //    → These surface informal "network post" roles before they hit job boards
 // 3. Jellow.nl (if user logged in on Browser 1): browse https://www.jellow.nl/opdrachten for producer/producent
 // 4. Sweep NEVER modifies crew (jcr). Only writes to jf + jc.
@@ -676,15 +677,21 @@ const LeadsTab = ({ leads, onUpdate, onAdd, onPromote, onDelete }) => {
 
 // ── Agencies Tab ──────────────────────────────────────────────────────────────
 const AgTab = ({ data, onUpdate, onAdd, onDelete, warm, leads }) => {
+  const AG_STOP = new Set(["amsterdam","netherlands","nederland","holland","de","van","het","the","and","en","bv","nv","ltd","inc"]);
   const getLinked = (agencyName) => {
     const norm = (agencyName || "").toLowerCase().trim();
     if (!norm) return [];
-    const words = norm.split(/[\s,./&+\-()]+/).filter(w => w.length > 2);
+    const sigWords = norm.split(/[\s,./&+\-()]+/).filter(w => w.length > 2 && !AG_STOP.has(w));
     return [...(warm||[]).map(c=>({...c,pool:"warm"})), ...(leads||[]).map(c=>({...c,pool:"leads"}))]
       .filter(c => {
         const co = (c.company||"").toLowerCase().trim();
         if (!co) return false;
-        return co.includes(norm) || norm.includes(co) || words.some(w => co.includes(w));
+        if (co === norm) return true;
+        if (co.includes(norm)) return true;
+        if (norm.length > 5 && norm.includes(co) && co.length > 4) return true;
+        if (!sigWords.length) return false;
+        const coWords = co.split(/[\s,./&+\-()]+/).filter(w => w.length > 2 && !AG_STOP.has(w));
+        return sigWords.some(w => coWords.includes(w));
       });
   };
 
@@ -812,10 +819,11 @@ const CrewTab = ({ data, onUpdate, onAdd, onDelete }) => {
                   <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top", minWidth:160 }}>
                     <EditCell value={c.email} onSave={(v) => onUpdate(c.id,"email",v)} />
                     {c.email && (
-                      <a href={`mailto:${c.email}?subject=Availability check - ${encodeURIComponent(c.specialty||"")}&body=Hi ${encodeURIComponent(c.name||"")},`}
-                        style={{ display:"inline-block", marginTop:4, background:"#eff6ff", color:"#2563eb", border:"1px solid #bfdbfe", borderRadius:4, padding:"2px 7px", fontSize:9, fontWeight:600, textDecoration:"none" }}>
-                        Draft email
-                      </a>
+                      <button
+                        onClick={() => window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(c.email)}&su=${encodeURIComponent("Availability — " + (c.specialty||"") + " | Jeoff")}&body=${encodeURIComponent("Hi " + (c.name||"").split(" ")[0] + ",\n\n")}`, "gmail_compose", "width=660,height=560,resizable=yes,scrollbars=yes")}
+                        style={{ display:"inline-block", marginTop:4, background:"#fff5f5", color:R, border:`1px solid ${R}`, borderRadius:4, padding:"2px 7px", fontSize:9, fontWeight:700, cursor:"pointer" }}>
+                        ✉ Draft in Gmail
+                      </button>
                     )}
                   </td>
                   <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top", minWidth:140 }}>
