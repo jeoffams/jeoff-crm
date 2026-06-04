@@ -842,9 +842,10 @@ const CrewTab = ({ data, onUpdate, onAdd, onDelete }) => {
 };
 
 // ── Jobs Tab ──────────────────────────────────────────────────────────────────
-const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo }) => {
-  const active = data.filter((j) => ["New","Researching"].includes(j.status||"New"));
-  const applied = data.filter((j) => !["New","Researching"].includes(j.status||"New"));
+const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass }) => {
+  const active  = data.filter((j) => ["New","Researching"].includes(j.status||"New"));
+  const applied = data.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
+  const passed  = data.filter((j) => j.status === "Passed");
   const THead = () => (
     <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
       {["COMPANY","ROLE","LOCATION","SECTOR","PRIORITY","STATUS","NOTES","SOURCE","SWEPT","APPLIED",""].map((h,i) => <th key={i} style={TH_STYLE}>{h}</th>)}
@@ -876,10 +877,15 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo }) => {
         <span style={{ fontSize:11, color: j.appliedDate ? "#059669" : C.muted+"55" }}>{j.appliedDate||"—"}</span>
       </td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-        {!j.appliedDate ? (
-          <button onClick={() => onApply(j.id)} style={{ background:"#fff5f5", color:R, border:`1px solid ${R}`, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:10, fontWeight:700, whiteSpace:"nowrap" }}>Applied</button>
-        ) : (
+        {j.appliedDate ? (
           <button onClick={() => onUndo(j.id)} style={{ background:"#f8fafc", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>Undo</button>
+        ) : j.status === "Passed" ? (
+          <span style={{ fontSize:10, color:C.muted, fontStyle:"italic" }}>Passed</span>
+        ) : (
+          <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+            <button onClick={() => onApply(j.id)} style={{ background:"#fff5f5", color:R, border:`1px solid ${R}`, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:10, fontWeight:700, whiteSpace:"nowrap" }}>Applied</button>
+            <button onClick={() => onPass(j.id)} style={{ background:"#f8f8f8", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>Pass</button>
+          </div>
         )}
       </td>
     </tr>
@@ -888,7 +894,7 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo }) => {
     <div style={{ padding:"16px 20px" }}>
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
         <AddBtn label={"Add "+type+" Job"} onClick={onAdd} />
-        <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{data.length} total — {active.length} active</span>
+        <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{data.length} total — {active.length} active — {passed.length} passed</span>
       </div>
       <div style={{ marginBottom:20 }}>
         <SecHd label="Active — New and Researching" count={active.length} color={R} />
@@ -896,12 +902,18 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo }) => {
           <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}><THead /><tbody>{active.map((j) => <JobRow key={j.id} j={j} />)}</tbody></table></div>
         )}
       </div>
-      <div>
+      <div style={{ marginBottom:20 }}>
         <SecHd label="Applied and Responded" count={applied.length} color={C.muted} />
         {applied.length===0 ? <div style={{ fontSize:12, color:C.muted, fontStyle:"italic", padding:"8px 0" }}>No applied jobs yet.</div> : (
           <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}><THead /><tbody>{applied.map((j) => <JobRow key={j.id} j={j} />)}</tbody></table></div>
         )}
       </div>
+      {passed.length > 0 && (
+        <div>
+          <SecHd label="Passed — Decided Not to Apply" count={passed.length} color={C.muted} />
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.65 }}><THead /><tbody>{passed.map((j) => <JobRow key={j.id} j={j} />)}</tbody></table></div>
+        </div>
+      )}
     </div>
   );
 };
@@ -972,8 +984,53 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [loadStatus, setLoadStatus] = useState("Connecting to Google Drive...");
   const autoSaveTimer  = useRef(null);
+  const linkedRef = useRef(new Set());
+
+  const autoLinkContact = useCallback((lead) => {
+    if (!lead?.company || !lead?.name) return;
+    const comp = lead.company.toLowerCase().trim();
+    const name = lead.name;
+    setAg(prev => {
+      const next = prev.map(a => {
+        if (a.contact && a.contact !== 'TBD' && a.contact !== '-' && a.contact !== '') return a;
+        const aN = (a.name || '').toLowerCase().trim();
+        const words = aN.split(/[\s,./&+()-]+/).filter(w => w.length > 2);
+        const match = aN === comp || aN.includes(comp) || comp.includes(aN) || words.some(w => comp.includes(w));
+        if (!match) return a;
+        return { ...a, contact: name, status: a.status === 'Find contact' ? 'New Lead added' : a.status };
+      });
+      const changed = JSON.stringify(next) !== JSON.stringify(prev);
+      if (changed) db.set('ja', next);
+      return changed ? next : prev;
+    });
+    setBr(prev => {
+      const next = prev.map(b => {
+        if (b.contactToFind && b.contactToFind !== 'TBD' && b.contactToFind !== '-' && b.contactToFind !== '') return b;
+        const bN = (b.brand || '').toLowerCase().trim();
+        const words = bN.split(/\s+/).filter(w => w.length > 2);
+        const match = bN === comp || bN.includes(comp) || comp.includes(bN) || words.some(w => comp.includes(w));
+        if (!match) return b;
+        return { ...b, contactToFind: name };
+      });
+      const changed = JSON.stringify(next) !== JSON.stringify(prev);
+      if (changed) db.set('jb', next);
+      return changed ? next : prev;
+    });
+  }, []);
   const initialLoad    = useRef(true);
   const searchRef = useRef(null);
+
+  // ── Auto-link leads to agencies/brands ─────────────────────────────────────────
+  useEffect(() => {
+    if (!appReady) return;
+    [...newL, ...warm].forEach(lead => {
+      if (!lead.name || !lead.company) return;
+      const key = (lead.name + '|' + lead.company).toLowerCase();
+      if (linkedRef.current.has(key)) return;
+      linkedRef.current.add(key);
+      autoLinkContact(lead);
+    });
+  }, [newL, warm, appReady]);
 
   // ── Auth session ────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1140,11 +1197,15 @@ export default function App() {
   }, []);
 
   const applyJob = useCallback((key, setter) => (id) => {
-    setter((prev) => { const next = prev.map((x) => x.id===id ? {...x,status:"Applied",appliedDate:nowStr()} : x); db.set(key,next); return next; });
+    setter((prev) => { const next = prev.map((x) => x.id===id ? {...x,status:"Applied",appliedDate:nowStr(),isNew:false} : x); db.set(key,next); return next; });
   }, []);
 
   const undoApply = useCallback((key, setter) => (id) => {
     setter((prev) => { const next = prev.map((x) => x.id===id ? {...x,status:"New",appliedDate:null} : x); db.set(key,next); return next; });
+  }, []);
+
+  const passJob = useCallback((key, setter) => (id) => {
+    setter((prev) => { const next = prev.map((x) => x.id===id ? {...x, status:"Passed", isNew:false} : x); db.set(key, next); return next; });
   }, []);
 
   const exportData = useCallback(() => {
@@ -1267,8 +1328,8 @@ export default function App() {
         {tab==="agencies"  && <AgTab   data={ag}    onUpdate={upd("ja",setAg)}   onAdd={add(setAg,"ja",{name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""})} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
         {tab==="brands"    && <BrTab   data={br}    onUpdate={upd("jb",setBr)}   onAdd={add(setBr,"jb",{brand:"",contactToFind:"",sector:"",warmIn:"No",priority:"3/5",status:"Cold",notes:""})} onDelete={del("jb",setBr)} />}
         {tab==="crew"      && <CrewTab data={crew}  onUpdate={upd("jcr",setCrew)} onAdd={add(setCrew,"jcr",{name:"",specialty:"Motion Design",rate:"",email:"",website:"",location:"Amsterdam",notes:""})} onDelete={del("jcr",setCrew)} />}
-        {tab==="freelance" && <JobsTab data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} />}
-        {tab==="contract"  && <JobsTab data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} />}
+        {tab==="freelance" && <JobsTab data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} />}
+        {tab==="contract"  && <JobsTab data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} />}
       </div>
 
       {/* Export modal */}
