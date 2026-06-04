@@ -1207,7 +1207,7 @@ export default function App() {
         ? `Draft a short, warm LinkedIn DM or email from Jeoff to ${entity.name} (${entity.role} at ${entity.company}).\nContext: ${entity.notes || "No additional notes."}\nLast contact: ${entity.lastContact || "Never"}, Stage: ${entity.stage || "New"}.\nMake it conversational, specific to their company/work, and open-ended. 3-4 sentences max. No subject line.`
         : `Draft a brief cover email for this opportunity:\nCompany: ${entity.company}\nRole: ${entity.role}\nLocation: ${entity.location || "Amsterdam"}\nSector: ${entity.sector || ""}\nNotes: ${entity.notes || ""}\n\nWrite 2-3 short paragraphs. Hook in the first line — reference the specific role/company. Mention AI production background where relevant. Confident CTA at end. Sign off as Jeoff. No "Dear Hiring Manager" formality.`;
 
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
