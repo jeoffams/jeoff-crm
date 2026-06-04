@@ -456,7 +456,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct }) => {
 const WARM_STAGES = ["Conversation","Nurturing","Radar","Proposal","Won","Paused"];
 const TIER_OPTS = ["A – Agency","A – Studio","B – Brand","B – Agency","C – Studio","C – Agency","Other"];
 
-const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive }) => {
+const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive, onDraft }) => {
   const [q, setQ] = useState("");
   const [archivingId, setArchivingId] = useState(null);
   const [archiveReason, setArchiveReason] = useState("");
@@ -527,6 +527,11 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
                           Reached Out
                         </button>
                         <div style={{ fontSize:9, color:C.muted, marginTop:3, whiteSpace:"nowrap" }}>stamps today +14d</div>
+                        {onDraft && (
+                          <button onClick={() => onDraft(l)} style={{ marginTop:5, display:"block", background:"#fdf2ff", color:"#7c3aed", border:"1px solid #e9d5ff", borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap", width:"100%" }}>
+                            ✍ Draft outreach
+                          </button>
+                        )}
                         <div style={{ marginTop:6 }}>
                           {archivingId === l.id ? (
                             <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
@@ -1313,7 +1318,7 @@ export default function App() {
             </div>
           )}
           <button onClick={exportData} style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", cursor:"pointer", fontSize:11, fontWeight:600 }}>Export</button>
-          <button onClick={() => setImportModal(true)} style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", cursor:"pointer", fontSize:11, fontWeight:600 }}>Import</button>
+
           <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
             <div style={{ fontSize:10, color:"#16a34a", fontWeight:600 }}>✓ Supabase</div>
             <div style={{ fontSize:8, color:C.muted, textTransform:"uppercase", letterSpacing:"0.4px" }}>saved instantly on every change</div>
@@ -1340,7 +1345,7 @@ export default function App() {
       {/* Content */}
       <div style={{ maxWidth:1600, margin:"0 auto", paddingTop:20 }}>
         {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} />}
-        {tab==="warm"      && <WarmTab leads={warm} onUpdate={upd("jw",setWarm)} onStageChange={warmStageChange} onAdd={add(setWarm,"jw",{name:"",role:"",company:"",email:"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"",notes:""})} onDelete={del("jw",setWarm)} onArchive={archiveToLeads} />}
+        {tab==="warm"      && <WarmTab leads={warm} onUpdate={upd("jw",setWarm)} onStageChange={warmStageChange} onAdd={add(setWarm,"jw",{name:"",role:"",company:"",email:"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"",notes:""})} onDelete={del("jw",setWarm)} onArchive={archiveToLeads} onDraft={(l) => generateDraft(l, "outreach")} />}
         {tab==="leads"     && <LeadsTab leads={newL} onUpdate={upd("jn",setNewL)} onAdd={add(setNewL,"jn",{name:"",role:"",company:"",contact:"LinkedIn",tier:"A – Agency",stage:"New",dateAdded:nowStr(),notes:""})} onPromote={promoteToWarm} onDelete={del("jn",setNewL)} />}
         {tab==="agencies"  && <AgTab   data={ag}    onUpdate={upd("ja",setAg)}   onAdd={add(setAg,"ja",{name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""})} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
         {tab==="brands"    && <BrTab   data={br}    onUpdate={upd("jb",setBr)}   onAdd={add(setBr,"jb",{brand:"",contactToFind:"",sector:"",warmIn:"No",priority:"3/5",status:"Cold",notes:""})} onDelete={del("jb",setBr)} />}
