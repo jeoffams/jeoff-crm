@@ -3,10 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY
 
-const supabase = createClient(supabaseUrl, supabaseKey)
+export const supabase = createClient(supabaseUrl, supabaseKey)
 
-// Simple key/value API matching the previous window.storage interface.
-// All CRM arrays are stored as JSONB in a single crm_data table.
+// Simple key/value API — all CRM arrays stored as JSONB in crm_data table
 export const db = {
   get: async (key) => {
     try {
