@@ -6,12 +6,7 @@ const C = { bg:"#ffffff", border:"#e5e5e5", text:"#111111", muted:"#909090" };
 
 
 const uid = () => Math.random().toString(36).slice(2, 9);
-const getCurrency = (location) => {
-  if (!location) return '€';
-  const l = location.toLowerCase();
-  if (l.includes('london')||l.includes(' uk')||l.includes('england')||l.includes('bristol')||l.includes('manchester')||l.includes('edinburgh')||l==='uk') return '£';
-  if (l.includes('new york')||l.includes('los angeles')||l.includes('chicago')||l.includes('san francisco')||l.includes('seattle')||l.includes('usa')||l.includes('united states')) return '
-const nowStr = () => { const d = new Date(); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()).slice(2)}`; };
+const getCurrency = (loc) => { const l = (loc||"").toLowerCase(); if (l.includes("uk")||l.includes("england")||l.includes("scotland")||l.includes("wales")||l.includes("britain")) return "\u00a3"; if (l.includes("usa")||l.includes("united states")||l.includes("canada")) return "$"; if (l.includes("sweden")||l.includes("norway")||l.includes("denmark")) return "kr"; return "\u20ac"; };
 const parseDate = (s) => { if (!s) return null; const p = s.split("/"); if (p.length !== 3) return null; return new Date(2000+parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0])); };
 const daysUntil = (s) => { const d = parseDate(s); if (!d) return 999; return Math.round((d - new Date()) / 86400000); };
 const plus14 = () => { const d = new Date(); d.setDate(d.getDate()+14); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()).slice(2)}`; };
@@ -2198,7 +2193,7 @@ const CrewTab = ({ data, onUpdate, onAdd, onDelete }) => {
                     <Sel value={c.specialty||"Motion Design"} opts={ALL_SPECS} onChange={(v) => onUpdate(c.id,"specialty",v)} />
                     <span style={{ background:sc.bg, color:sc.col, borderRadius:4, padding:"1px 5px", fontSize:9, fontWeight:600, display:"inline-block", marginTop:3 }}>{c.specialty}</span>
                   </td>
-                  <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={c.rate} onSave={(v) => onUpdate(c.id,"rate",v)} /></td>
+                  <td style={{ padding:"8px 10px", verticalAlign:"top" }}><div style={{ display:"flex", alignItems:"center", gap:4 }}><span style={{ fontSize:11, color:"#909090", flexShrink:0 }}>{getCurrency(c.location)}</span><EditCell value={c.rate} onSave={(v) => onUpdate(c.id,"rate",v)} /></div></td>
                   <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top", minWidth:160 }}>
                     <EditCell value={c.email} onSave={(v) => onUpdate(c.id,"email",v)} />
                     {c.email && (
