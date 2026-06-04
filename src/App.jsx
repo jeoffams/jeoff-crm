@@ -850,7 +850,7 @@ const CrewTab = ({ data, onUpdate, onAdd, onDelete }) => {
 };
 
 // ── Jobs Tab ──────────────────────────────────────────────────────────────────
-const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass }) => {
+const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onDraft }) => {
   const active  = data.filter((j) => ["New","Researching"].includes(j.status||"New"));
   const applied = data.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
   const passed  = data.filter((j) => j.status === "Passed");
@@ -893,6 +893,7 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass }) => {
           <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
             <button onClick={() => onApply(j.id)} style={{ background:"#fff5f5", color:R, border:`1px solid ${R}`, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:10, fontWeight:700, whiteSpace:"nowrap" }}>Applied</button>
             <button onClick={() => onPass(j.id)} style={{ background:"#f8f8f8", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>Pass</button>
+            {onDraft && <button onClick={() => onDraft(j)} style={{ background:"#fdf2ff", color:"#7c3aed", border:"1px solid #e9d5ff", borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>✍ Draft</button>}
           </div>
         )}
       </td>
@@ -987,6 +988,7 @@ export default function App() {
   const [exportModal, setExportModal] = useState(null);
   const [importModal, setImportModal] = useState(false);
   const [importText, setImportText] = useState("");
+  const [draftModal, setDraftModal] = useState(null);
   const [appReady, setAppReady]     = useState(false);
   const [session, setSession]         = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -1194,6 +1196,35 @@ export default function App() {
     setter((prev) => { const next = prev.map((x) => x.id===id ? {...x, status:"Passed", isNew:false} : x); db.set(key, next); return next; });
   }, []);
 
+  // ── AI cover note + outreach drafts ───────────────────────────────────────────
+  const JEOFF_BIO = `Jeoffrey van Overveld (jeoff.nl) is a senior freelance Creative Producer & Project Manager based in Amsterdam with 15+ years delivering animation, VFX, CGI, and AI-driven branded content. He has produced AI campaigns for Adidas, worked across agencies and direct brands, and is known for keeping productions on brief, on budget, and on time. He thinks fast, communicates clearly, and has a hands-on background that means he never over-engineers a brief.`;
+
+  const generateDraft = useCallback(async (entity, draftType = "cover") => {
+    setDraftModal({ entity, text: "", loading: true, type: draftType });
+    try {
+      const isOutreach = draftType === "outreach";
+      const prompt = isOutreach
+        ? `Draft a short, warm LinkedIn DM or email from Jeoff to ${entity.name} (${entity.role} at ${entity.company}).\nContext: ${entity.notes || "No additional notes."}\nLast contact: ${entity.lastContact || "Never"}, Stage: ${entity.stage || "New"}.\nMake it conversational, specific to their company/work, and open-ended. 3-4 sentences max. No subject line.`
+        : `Draft a brief cover email for this opportunity:\nCompany: ${entity.company}\nRole: ${entity.role}\nLocation: ${entity.location || "Amsterdam"}\nSector: ${entity.sector || ""}\nNotes: ${entity.notes || ""}\n\nWrite 2-3 short paragraphs. Hook in the first line — reference the specific role/company. Mention AI production background where relevant. Confident CTA at end. Sign off as Jeoff. No "Dear Hiring Manager" formality.`;
+
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: `You are writing outreach on behalf of: ${JEOFF_BIO}\n\nWrite in first person as Jeoff. Be direct, confident, and specific — never generic. Keep it short.`,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || "Failed to generate draft.";
+      setDraftModal({ entity, text, loading: false, type: draftType });
+    } catch (e) {
+      setDraftModal({ entity, text: "Error: " + e.message, loading: false, type: draftType });
+    }
+  }, []);
+
   const exportData = useCallback(() => {
     const data = { exportDate:nowStr(), warmLeads:warm, leads:newL, agencies:ag, brands:br, crew, freelanceJobs:fl, contractJobs:ct };
     setExportModal(JSON.stringify(data, null, 2));
@@ -1314,9 +1345,43 @@ export default function App() {
         {tab==="agencies"  && <AgTab   data={ag}    onUpdate={upd("ja",setAg)}   onAdd={add(setAg,"ja",{name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""})} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
         {tab==="brands"    && <BrTab   data={br}    onUpdate={upd("jb",setBr)}   onAdd={add(setBr,"jb",{brand:"",contactToFind:"",sector:"",warmIn:"No",priority:"3/5",status:"Cold",notes:""})} onDelete={del("jb",setBr)} />}
         {tab==="crew"      && <CrewTab data={crew}  onUpdate={upd("jcr",setCrew)} onAdd={add(setCrew,"jcr",{name:"",specialty:"Motion Design",rate:"",email:"",website:"",location:"Amsterdam",notes:""})} onDelete={del("jcr",setCrew)} />}
-        {tab==="freelance" && <JobsTab data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} />}
-        {tab==="contract"  && <JobsTab data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} />}
+        {tab==="freelance" && <JobsTab data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} onDraft={(j) => generateDraft(j, "cover")} />}
+        {tab==="contract"  && <JobsTab data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} onDraft={(j) => generateDraft(j, "cover")} />}
       </div>
+
+      {draftModal && (
+        <div onClick={(e) => e.target===e.currentTarget && setDraftModal(null)}
+          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:600, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ background:"#fff", borderRadius:12, padding:28, width:580, maxWidth:"94vw", maxHeight:"88vh", display:"flex", flexDirection:"column", boxShadow:"0 20px 60px rgba(0,0,0,.25)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
+              <div>
+                <div style={{ fontWeight:700, fontSize:14, color:C.text }}>{draftModal.type==="outreach" ? `Outreach — ${draftModal.entity.name}` : `Cover note — ${draftModal.entity.company}`}</div>
+                <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{draftModal.type==="outreach" ? draftModal.entity.role+" · "+draftModal.entity.company : draftModal.entity.role}</div>
+              </div>
+              <button onClick={() => setDraftModal(null)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:22, color:C.muted, lineHeight:1, padding:0 }}>×</button>
+            </div>
+            {draftModal.loading ? (
+              <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:10, color:C.muted, fontSize:13 }}>
+                <div style={{ width:18, height:18, border:"2px solid #eee", borderTopColor:R, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
+                Drafting with Claude...
+              </div>
+            ) : (
+              <>
+                <textarea value={draftModal.text} onChange={(e) => setDraftModal(p => ({...p, text: e.target.value}))}
+                  style={{ flex:1, minHeight:260, border:`1px solid ${C.border}`, borderRadius:8, padding:"12px 14px", fontSize:12, lineHeight:1.7, fontFamily:"inherit", outline:"none", resize:"vertical", color:C.text }} />
+                <div style={{ display:"flex", gap:8, marginTop:14, flexWrap:"wrap" }}>
+                  <button onClick={() => { const e=draftModal.entity; const subj=draftModal.type==="outreach"?encodeURIComponent("Following up — "+(e.company||"")):encodeURIComponent(e.role+" — Jeoffrey van Overveld"); const body=encodeURIComponent(draftModal.text); const to=encodeURIComponent(e.email||""); window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subj}&body=${body}`,"gmail_draft","width=660,height=560,resizable=yes,scrollbars=yes"); }}
+                    style={{ background:R, color:"#fff", border:"none", borderRadius:7, padding:"9px 16px", cursor:"pointer", fontSize:11, fontWeight:700 }}>✉ Open in Gmail</button>
+                  <button onClick={() => navigator.clipboard.writeText(draftModal.text).then(() => setMsg("✓ Copied to clipboard"))}
+                    style={{ background:"#f8f8f8", color:C.text, border:`1px solid ${C.border}`, borderRadius:7, padding:"9px 16px", cursor:"pointer", fontSize:11, fontWeight:600 }}>Copy</button>
+                  <button onClick={() => generateDraft(draftModal.entity, draftModal.type)}
+                    style={{ background:"#fdf2ff", color:"#7c3aed", border:"1px solid #e9d5ff", borderRadius:7, padding:"9px 16px", cursor:"pointer", fontSize:11, fontWeight:600 }}>↻ Regenerate</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Export modal */}
       {exportModal && (
