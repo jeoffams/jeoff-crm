@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { db } from "./supabase.js";
+import { db, supabase } from "./supabase.js";
 
 const R = "#f53a1b";
 const C = { bg:"#ffffff", border:"#e5e5e5", text:"#111111", muted:"#909090" };
@@ -907,6 +907,37 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo }) => {
 };
 
 
+
+// ── Login Screen ────────────────────────────────────────────────────────────────────────────
+const LoginScreen = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const handleLogin = async () => {
+    if (!email || !password) return;
+    setLoading(true); setError("");
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { setError("Incorrect email or password."); setLoading(false); }
+  };
+  const onKey = (e) => { if (e.key === "Enter") handleLogin(); };
+  return (
+    <div style={{ position:"fixed", inset:0, background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+      <Logo />
+      <div style={{ marginTop:40, width:320 }}>
+        <div style={{ textAlign:"center", marginBottom:28 }}><div style={{ fontSize:13, color:C.muted }}>Sign in to your CRM</div></div>
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={onKey} autoFocus style={{ border:`1px solid ${C.border}`, borderRadius:7, padding:"11px 14px", fontSize:13, outline:"none", fontFamily:"inherit", width:"100%", boxSizing:"border-box" }} />
+          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onKey} style={{ border:`1px solid ${C.border}`, borderRadius:7, padding:"11px 14px", fontSize:13, outline:"none", fontFamily:"inherit", width:"100%", boxSizing:"border-box" }} />
+          {error && <div style={{ fontSize:12, color:R, textAlign:"center" }}>{error}</div>}
+          <button onClick={handleLogin} disabled={loading || !email || !password} style={{ background: loading ? "#ccc" : R, color:"#fff", border:"none", borderRadius:7, padding:"12px", cursor: loading ? "not-allowed" : "pointer", fontSize:13, fontWeight:700, marginTop:4 }}>{loading ? "Signing in..." : "Sign In"}</button>
+        </div>
+      </div>
+      <div style={{ position:"absolute", bottom:28, fontSize:10, color:"#ddd" }}>jeoff.nl · private</div>
+    </div>
+  );
+};
+
 // ── Loading Screen ────────────────────────────────────────────────────────────
 const LoadingScreen = ({ status }) => (
   <div style={{ position:"fixed", inset:0, background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", zIndex:9999 }}>
@@ -937,10 +968,25 @@ export default function App() {
   const [importModal, setImportModal] = useState(false);
   const [importText, setImportText] = useState("");
   const [appReady, setAppReady]     = useState(false);
+  const [session, setSession]         = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [loadStatus, setLoadStatus] = useState("Connecting to Google Drive...");
   const autoSaveTimer  = useRef(null);
   const initialLoad    = useRef(true);
   const searchRef = useRef(null);
+
+  // ── Auth session ────────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthChecked(true);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setSession(session);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
 
   useEffect(() => {
     (async () => {
@@ -1143,6 +1189,8 @@ export default function App() {
     { id:"contract",  label:"Contract Jobs",  badge:ctNew },
   ];
 
+  if (!authChecked) return <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh" }}><div style={{ width:24, height:24, border:"2px solid #eee", borderTopColor:R, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} /></div>;
+  if (!session) return <LoginScreen />;
   if (!appReady) return <LoadingScreen status={loadStatus} />;
 
   return (
