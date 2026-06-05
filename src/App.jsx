@@ -864,22 +864,22 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass }) => {
     <tr style={{ borderBottom:`1px solid ${C.border}`, background: j.isNew ? "#fff9f8" : "#fff" }}>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
         <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-          <span style={{ fontWeight:600, fontSize:12 }}>{j.company}</span>
           {j.isNew && <span style={{ background:R, color:"#fff", borderRadius:4, padding:"1px 4px", fontSize:9, fontWeight:700 }}>NEW</span>}
+          <EditCell value={j.company||""} onSave={(v) => onUpdate(j.id,"company",v)} />
         </div>
       </td>
-      <TC bold top>{j.role}</TC>
-      <TC muted top>{j.location}</TC>
-      <TC muted top>{j.sector}</TC>
+      <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={j.role||""} onSave={(v) => onUpdate(j.id,"role",v)} /></td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={j.location||""} onSave={(v) => onUpdate(j.id,"location",v)} /></td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={j.sector||""} onSave={(v) => onUpdate(j.id,"sector",v)} /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-        <span style={{ fontSize:11, fontWeight:600, color: j.priority==="High" ? R : j.priority==="Medium" ? "#d97706" : C.muted }}>{j.priority}</span>
+        <Sel value={j.priority||"Medium"} opts={["High","Medium","Low"]} onChange={(v) => onUpdate(j.id,"priority",v)} cf={p => p==="High"?R:p==="Medium"?"#d97706":C.muted} />
       </td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
         <Sel value={j.status||"New"} opts={["New","Researching","Applied","No Response","Conversation","Offer","Rejected"]} onChange={(v) => onUpdate(j.id,"status",v)} cf={jobCol} />
       </td>
       <td style={{ padding:"8px 10px", minWidth:180, verticalAlign:"top" }}><EditCell value={j.notes} onSave={(v) => onUpdate(j.id,"notes",v)} multi /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-        {j.source ? <a href={j.source} target="_blank" rel="noreferrer" style={{ color:R, fontSize:11, textDecoration:"none" }}>Link</a> : <span style={{ color:C.muted+"55" }}>—</span>}
+        <WebsiteCell value={j.source||""} onSave={(v) => onUpdate(j.id,"source",v)} />
       </td>
       <td style={{ padding:"8px 10px", verticalAlign:"top", whiteSpace:"nowrap" }}><span style={{ fontSize:11, color:C.muted }}>{j.date||"—"}</span></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top", whiteSpace:"nowrap" }}>
@@ -1042,10 +1042,29 @@ export default function App() {
           db.get("jcr"), db.get("jf"), db.get("jc"), db.get("jsid")
         ]);
 
-        if (w&&w.length) setWarm(w); else { setWarm(SW); db.set("jw", SW); }
+        const loadedAg=(a&&a.length)?a:SAg;
+        const loadedBr=(b&&b.length)?b:SBr;
+        const baseWarm=(w&&w.length)?w:SW;
+        const warmCos=new Set(baseWarm.map(x=>(x.company||'').toLowerCase()));
+        const warmAdds=[];
+        loadedAg.forEach(ag=>{
+          if(ag.status==='In Warm Leads'&&!warmCos.has((ag.name||'').toLowerCase())){
+            warmAdds.push(mk({name:ag.contact||'Contact TBD',role:'',company:ag.name||'',email:ag.email||'',tier:'A – Agency',stage:'Nurturing',lastContact:nowStr(),nextActionDate:'',nextAction:'Follow up — added from Agencies.',notes:ag.notes||''}));
+            warmCos.add((ag.name||'').toLowerCase());
+          }
+        });
+        loadedBr.forEach(br=>{
+          if((br.warmIn==='Yes'||br.status==='In Warm Leads')&&!warmCos.has((br.brand||'').toLowerCase())){
+            warmAdds.push(mk({name:br.contactToFind||'Contact TBD',role:'',company:br.brand||'',email:'',tier:'B – Brand',stage:'Nurturing',lastContact:nowStr(),nextActionDate:'',nextAction:'Find and reach out.',notes:br.notes||''}));
+            warmCos.add((br.brand||'').toLowerCase());
+          }
+        });
+        const finalWarm=warmAdds.length?[...baseWarm,...warmAdds]:baseWarm;
+        setWarm(finalWarm);
+        if(!w||!w.length||warmAdds.length)db.set('jw',finalWarm);
         if (n&&n.length) setNewL(n); else { setNewL(SN); db.set("jn", SN); }
-        if (a&&a.length) setAg(a);   else { setAg(SAg); db.set("ja", SAg); }
-        if (b&&b.length) setBr(b);   else { setBr(SBr); db.set("jb", SBr); }
+        setAg(loadedAg); if(!a||!a.length)db.set("ja",loadedAg);
+        setBr(loadedBr); if(!b||!b.length)db.set("jb",loadedBr);
         if (cr&&cr.length) setCrew(cr); else { setCrew(SCr); db.set("jcr", SCr); }
 
         let baseFl = f || [], baseCt = c || [];
@@ -1157,6 +1176,40 @@ export default function App() {
   const del = useCallback((key, setter) => (id) => {
     setter((prev) => { const next = prev.filter((x) => x.id!==id); db.set(key,next); return next; });
   }, []);
+
+  const updAgAndWarm=useCallback((id,field,val)=>{
+    setAg(prev=>{
+      const next=prev.map(x=>x.id===id?{...x,[field]:val}:x);
+      db.set('ja',next);
+      if(field==='status'&&val==='In Warm Leads'){
+        const ag=next.find(x=>x.id===id);
+        if(ag)setWarm(prevW=>{
+          const cos=new Set(prevW.map(x=>(x.company||'').toLowerCase()));
+          if(cos.has((ag.name||'').toLowerCase()))return prevW;
+          const entry=mk({name:ag.contact||'Contact TBD',role:'',company:ag.name||'',email:ag.email||'',tier:'A – Agency',stage:'Nurturing',lastContact:nowStr(),nextActionDate:'',nextAction:'Follow up — added from Agencies.',notes:ag.notes||''});
+          const nW=[...prevW,entry];db.set('jw',nW);return nW;
+        });
+      }
+      return next;
+    });
+  },[]);
+
+  const updBrAndWarm=useCallback((id,field,val)=>{
+    setBr(prev=>{
+      const next=prev.map(x=>x.id===id?{...x,[field]:val}:x);
+      db.set('jb',next);
+      if((field==='warmIn'&&val==='Yes')||(field==='status'&&val==='In Warm Leads')){
+        const br=next.find(x=>x.id===id);
+        if(br)setWarm(prevW=>{
+          const cos=new Set(prevW.map(x=>(x.company||'').toLowerCase()));
+          if(cos.has((br.brand||'').toLowerCase()))return prevW;
+          const entry=mk({name:br.contactToFind||'Contact TBD',role:'',company:br.brand||'',email:'',tier:'B – Brand',stage:'Nurturing',lastContact:nowStr(),nextActionDate:'',nextAction:'Find and reach out.',notes:br.notes||''});
+          const nW=[...prevW,entry];db.set('jw',nW);return nW;
+        });
+      }
+      return next;
+    });
+  },[]);
 
   // Stage change with timestamp log
   const warmStageChange = useCallback((id, newStage) => {
@@ -1312,8 +1365,8 @@ export default function App() {
         {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} />}
         {tab==="warm"      && <WarmTab leads={warm} onUpdate={upd("jw",setWarm)} onStageChange={warmStageChange} onAdd={add(setWarm,"jw",{name:"",role:"",company:"",email:"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"",notes:""})} onDelete={del("jw",setWarm)} onArchive={archiveToLeads} />}
         {tab==="leads"     && <LeadsTab leads={newL} onUpdate={upd("jn",setNewL)} onAdd={add(setNewL,"jn",{name:"",role:"",company:"",contact:"LinkedIn",tier:"A – Agency",stage:"New",dateAdded:nowStr(),notes:""})} onPromote={promoteToWarm} onDelete={del("jn",setNewL)} />}
-        {tab==="agencies"  && <AgTab   data={ag}    onUpdate={upd("ja",setAg)}   onAdd={add(setAg,"ja",{name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""})} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
-        {tab==="brands"    && <BrTab   data={br}    onUpdate={upd("jb",setBr)}   onAdd={add(setBr,"jb",{brand:"",contactToFind:"",sector:"",warmIn:"No",priority:"3/5",status:"Cold",notes:""})} onDelete={del("jb",setBr)} />}
+        {tab==="agencies"  && <AgTab   data={ag}    onUpdate={updAgAndWarm}   onAdd={add(setAg,"ja",{name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""})} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
+        {tab==="brands"    && <BrTab   data={br}    onUpdate={updBrAndWarm}   onAdd={add(setBr,"jb",{brand:"",contactToFind:"",sector:"",warmIn:"No",priority:"3/5",status:"Cold",notes:""})} onDelete={del("jb",setBr)} />}
         {tab==="crew"      && <CrewTab data={crew}  onUpdate={upd("jcr",setCrew)} onAdd={add(setCrew,"jcr",{name:"",specialty:"Motion Design",rate:"",email:"",website:"",location:"Amsterdam",notes:""})} onDelete={del("jcr",setCrew)} />}
         {tab==="freelance" && <JobsTab data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} />}
         {tab==="contract"  && <JobsTab data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} />}
