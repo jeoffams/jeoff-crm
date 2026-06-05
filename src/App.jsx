@@ -23,24 +23,25 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 //    → These surface informal "network post" roles before they hit job boards
 // 3. Jellow.nl (if user logged in on Browser 1): browse https://www.jellow.nl/opdrachten for producer/producent
 // 4. Sweep NEVER modifies crew (jcr). Only writes to jf + jc.
-const SWEEP_ID = "04/06/26-1";
-// Consolidated sweep — all real LinkedIn-verified jobs from 02/06/26 + 04/06/26
+const SWEEP_ID = "05/06/26-1";
+// Sweep 05/06/26: LinkedIn Jobs + Posts — 2 new jobs found.
 // NOTE: Sweeps never touch crew. Only jf/jc are ever modified by sweep logic.
 const LATEST_SWEEP = [
-  // ── Freelance ──────────────────────────────────────────────────────────────
+  // ── Freelance ──────────────────────────────────────────────────────────────────────────
   { company:"NOMOBO",         role:"Technical Producer EU",              type:"Freelance", location:"Amsterdam",  sector:"Tech / Creative",   priority:"High",   source:"https://linkedin.com/jobs", notes:"EU-wide technical production lead. Amsterdam-based tech/creative studio.", date:"02/06/26" },
   { company:"Loop Earplugs",  role:"Freelance Creative Strategist",      type:"Freelance", location:"Amsterdam",  sector:"Consumer / Brand",  priority:"Medium", source:"https://linkedin.com/jobs", notes:"Creative strategy + content role. Consumer earplugs brand with strong content output.", date:"02/06/26" },
-  { company:"Art of Dance",   role:"Creative Producer — Stage & Show Design", type:"Freelance", location:"Almere (Hybrid)", sector:"Events / Entertainment", priority:"Low", source:"https://linkedin.com/jobs", notes:"Stage and show design production. Dance/events sector. 30 min from Amsterdam. 1 week ago.", date:"04/06/26" },
-  // ── Contract ───────────────────────────────────────────────────────────────
+  { company:"Art of Dance",   role:"Creative Producer — Stage & Show Design", type:"Freelance", location:"Almere (Hybrid)", sector:"Events / Entertainment", priority:"Low", source:"https://linkedin.com/jobs", notes:"Stage and show design production. Dance/events sector. 30 min from Amsterdam.", date:"04/06/26" },
+  { company:"Adidas",         role:"Freelance PM/Producer — AI Campaigns", type:"Freelance", location:"Amsterdam (On-site)", sector:"Sports / Fashion", priority:"High", source:"https://www.linkedin.com/search/results/content/?keywords=AI+campaign+producer+netherlands", notes:"DIRECT BRIEF via LinkedIn post. Anna Soderstrom (anna.soderstrom@externals.adidas.com). Freelance PM/Creative Producer for in-house AI campaign project. Mid-Aug to year-end. NL on-site. AI production experience required. YOU HAVE 2 YRS ADIDAS EMBED — EMAIL NOW.", date:"05/06/26" },
+  // ── Contract ─────────────────────────────────────────────────────────────────────────
   { company:"Booking.com",    role:"Content Producer",                   type:"Contract",  location:"Amsterdam",  sector:"Tech / Travel",     priority:"High",   source:"https://linkedin.com/jobs", notes:"Content production role at one of Amsterdam's biggest employers. AMS HQ.", date:"02/06/26" },
   { company:"GoSpooky",       role:"Senior Project Manager",             type:"Contract",  location:"Amsterdam",  sector:"Social / Content",  priority:"Medium", source:"https://linkedin.com/jobs", notes:"Social-first creative agency. Growing Amsterdam studio.", date:"02/06/26" },
   { company:"DEPT®",     role:"Senior Project Manager",             type:"Contract",  location:"Amsterdam",  sector:"Digital / Agency",  priority:"High",   source:"https://linkedin.com/jobs", notes:"Global digital agency. Strong fit for senior CP with production background.", date:"02/06/26" },
-  { company:"DIGIC Pictures", role:"Senior Producer — Games Cinematics", type:"Contract",  location:"Remote (EU)",sector:"Games / CGI",        priority:"High",   source:"https://linkedin.com/jobs", notes:"CGI games cinematics specialist role. Excellent fit for CG production background.", date:"02/06/26" },
-  { company:"Netflix",        role:"Language Producer FTC",              type:"Contract",  location:"Amsterdam",  sector:"Streaming / Media", priority:"High",   source:"https://linkedin.com/jobs", notes:"12-month FTC. Prestige. Netflix Amsterdam office. Was posted 7 hours before discovery.", date:"02/06/26" },
-  { company:"Monks",          role:"Senior Producer — Experiential EMEA",type:"Contract",  location:"Amsterdam",  sector:"Agency / Production", priority:"High", source:"https://monks.com/careers", notes:"Integrated producer for EMEA experiential team. Projects span Experiential, Web, Content, Broadcast, Events. Strong AI/tech angle. You have warm contacts inside (Cas, Tommaso).", date:"04/06/26" },
-  { company:"Twine",          role:"Executive Producer — Preschool TV Packaging", type:"Contract", location:"Remote (EU)", sector:"TV / Broadcast", priority:"Medium", source:"https://linkedin.com/jobs", notes:"EP role for preschool TV packaging. Remote within EU. 1 week ago on LinkedIn.", date:"04/06/26" },
+  { company:"DIGIC Pictures", role:"Senior Producer — Games Cinematics", type:"Contract",  location:"Remote (EU)", sector:"Games / CGI",      priority:"High",   source:"https://linkedin.com/jobs", notes:"CGI games cinematics specialist role. Excellent fit for CG production background.", date:"02/06/26" },
+  { company:"Netflix",        role:"Language Producer FTC",              type:"Contract",  location:"Amsterdam",  sector:"Streaming / Media", priority:"High",   source:"https://linkedin.com/jobs", notes:"12-month FTC. Prestige. Netflix Amsterdam office.", date:"02/06/26" },
+  { company:"Monks",          role:"Senior Producer — Experiential EMEA", type:"Contract", location:"Amsterdam",  sector:"Agency / Production", priority:"High", source:"https://monks.com/careers", notes:"Integrated producer for EMEA experiential team. Strong AI/tech angle. Warm contacts inside (Cas, Tommaso).", date:"04/06/26" },
+  { company:"Twine",          role:"Executive Producer — Preschool TV Packaging", type:"Contract", location:"Remote (EU)", sector:"TV / Broadcast", priority:"Medium", source:"https://linkedin.com/jobs", notes:"EP role for preschool TV packaging. Remote within EU.", date:"04/06/26" },
+  { company:"DPG Media",      role:"Community Producer Libelle Club",    type:"Contract",  location:"Amsterdam (Hybrid)", sector:"Media / Publishing", priority:"Medium", source:"https://linkedin.com/jobs", notes:"6-month contract. Libelle Club community platform. DPG Media Nederland. 3 connections work here. Not core creative production but strong Dutch media name.", date:"05/06/26" },
 ];
-
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const mk = (x) => ({ ...x, id: uid() });
 const SW = [
