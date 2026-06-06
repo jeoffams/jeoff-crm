@@ -81,6 +81,19 @@ const SAg = [
   mk({ name:"Fitzroy Amsterdam", contact:"TBD", email:"", website:"https://fitzroy.tv", location:"Amsterdam", priority:"4/5", status:"Find contact", notes:"Boutique. High-craft commercials." }),
   mk({ name:"Ogilvy Amsterdam", contact:"TBD", email:"", website:"https://ogilvy.com", location:"Amsterdam", priority:"3/5", status:"Find contact", notes:"Global holding. Less independent-creative." }),
   mk({ name:"GoldenEgg Amsterdam", contact:"TBD", email:"", website:"https://goldenegg.nl", location:"Amsterdam", priority:"4/5", status:"Find contact", notes:"Boutique strategy + creative. Growing." }),
+  mk({ name:"CZAR", contact:"TBD", email:"support@czar.nl", website:"https://czar.nl", location:"Amsterdam", priority:"5/5", status:"Find contact", notes:"Top Dutch commercial production house. Animation + live action. Danzigerbocht 45g. One of the busiest production shops in NL." }),
+  mk({ name:"Halal", contact:"TBD", email:"", website:"https://halal.amsterdam", location:"Amsterdam", priority:"4/5", status:"Find contact", notes:"Production & photography agency. Artist-centric, anti-corporate approach. Strong branded content + editorial work." }),
+  mk({ name:"Hazazah", contact:"Jeroen van den Idsert", email:"", website:"https://hazazah.com", location:"Amsterdam", priority:"4/5", status:"Find contact", notes:"Award-winning film & photography production. Founded 1997. Commercials, branded content, documentary. Well-connected NL production world." }),
+  mk({ name:"The Mill Amsterdam", contact:"TBD", email:"", website:"https://themill.com", location:"Amsterdam", priority:"4/5", status:"Find contact", notes:"Global VFX & post production studio. Amsterdam office. High-end finishing, VFX, colour. Strong for campaigns with CG/VFX needs." }),
+  mk({ name:"Submarine", contact:"TBD", email:"", website:"https://submarine.nl", location:"Amsterdam", priority:"3/5", status:"Find contact", notes:"Amsterdam animation & feature film production. Oscar-nominated (Loving Vincent). Also does branded content and IP development." }),
+  mk({ name:"Glassworks Amsterdam", contact:"TBD", email:"", website:"https://glassworks.co.uk", location:"Amsterdam", priority:"5/5", status:"Find contact", notes:"VFX & post production. You have prior working relationship — strong re-entry angle. Leverage for production management on high-end campaigns." }),
+  mk({ name:"KesselsKramer", contact:"TBD", email:"", website:"https://kesselskramer.com", location:"Amsterdam", priority:"4/5", status:"Find contact", notes:"Iconic independent Amsterdam creative. Anti-agency philosophy. Unconventional brand work. Small but influential — good for creative PM roles." }),
+  mk({ name:"Anomaly Amsterdam", contact:"TBD", email:"", website:"https://amsterdam.anomaly.com", location:"Amsterdam", priority:"4/5", status:"Find contact", notes:"Independent creative agency. Global network. Strong strategic + content output. Good embed target for senior PM." }),
+  mk({ name:"McCann Amsterdam", contact:"TBD", email:"", website:"https://mccann.nl", location:"Amsterdam", priority:"3/5", status:"Find contact", notes:"Global creative network. Now one of 3 surviving Omnicom agencies (alongside TBWA + BBDO) after 2026 restructure. Picking up DDB/FCB clients." }),
+  mk({ name:"BBDO Amsterdam", contact:"TBD", email:"", website:"https://bbdo.com", location:"Amsterdam", priority:"3/5", status:"Find contact", notes:"Global creative network. Absorbing FCB teams in NL in 2026 (Omnicom restructure). Growth phase — good time to approach for production capacity." }),
+  mk({ name:"Storm Post Production", contact:"TBD", email:"", website:"https://stormpost.nl", location:"Amsterdam", priority:"3/5", status:"Find contact", notes:"Post production & VFX. Amsterdam. Commercial finishing, motion graphics. Boutique post house." }),
+  mk({ name:"N=5", contact:"TBD", email:"", website:"https://n5.nl", location:"Amsterdam", priority:"3/5", status:"Find contact", notes:"Brand + creative strategy agency. Amsterdam. Visual brand building, campaign development." }),
+  mk({ name:"Synima Amsterdam", contact:"TBD", email:"info@synima.com", website:"https://synima.com", location:"Amsterdam", priority:"3/5", status:"Find contact", notes:"Production company. Kraijenhoffstraat 137A Amsterdam. Corporate + commercial video production." }),
 ];
 const SBr = [
   mk({ brand:"Adidas", contactToFind:"Maria Drossos", sector:"Sports/Fashion", warmIn:"Yes", priority:"5/5", status:"In Warm Leads", notes:"Direct contact via Maria Drossos." }),
@@ -1175,7 +1188,9 @@ export default function App() {
           db.get("jcr"), db.get("jf"), db.get("jc"), db.get("jsid"), db.get("jpen")
         ]);
 
-        const loadedAg=(a&&a.length)?a:SAg;
+        const existAgNames=new Set((a&&a.length?a:[]).map(x=>(x.name||'').toLowerCase().trim()));
+        const freshAgFromSeed=SAg.filter(s=>!existAgNames.has((s.name||'').toLowerCase().trim()));
+        const loadedAg=(a&&a.length)?[...a,...freshAgFromSeed]:SAg;
         const loadedBr=(b&&b.length)?b:SBr;
         const baseWarm=(w&&w.length)?w:SW;
         const warmCos=new Set(baseWarm.map(x=>(x.company||'').toLowerCase()));
@@ -1196,7 +1211,7 @@ export default function App() {
         setWarm(finalWarm);
         if(!w||!w.length||warmAdds.length)db.set('jw',finalWarm);
         if (n&&n.length) setNewL(n); else { setNewL(SN); db.set("jn", SN); }
-        setAg(loadedAg); if(!a||!a.length)db.set("ja",loadedAg);
+        setAg(loadedAg); if(!a||!a.length||freshAgFromSeed.length)db.set("ja",loadedAg);
         setBr(loadedBr); if(!b||!b.length)db.set("jb",loadedBr);
         if(pen&&pen.length) setPencils(pen);
         if (cr&&cr.length) setCrew(cr); else { setCrew(SCr); db.set("jcr", SCr); }
@@ -1479,7 +1494,11 @@ export default function App() {
           </button>
           <button onClick={exportData} style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", cursor:"pointer", fontSize:11, fontWeight:600 }}>Export</button>
 
-
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+            <div style={{ fontSize:10, color:"#16a34a", fontWeight:600 }}>✓ Supabase</div>
+            <div style={{ fontSize:8, color:C.muted, textTransform:"uppercase", letterSpacing:"0.4px" }}>saved instantly on every change</div>
+          </div>
+          <div style={{ width:1, height:28, background:C.border, flexShrink:0 }} />
           <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
             <div style={{ fontSize:10, color:C.muted }}>Last sweep: <span style={{ color:C.text, fontWeight:600 }}>{SWEEP_ID.split("-")[0]}</span></div>
             <div style={{ color:C.muted, fontSize:9, textTransform:"uppercase", letterSpacing:"0.7px" }}>Type "Run Sweep" in chat to update</div>
