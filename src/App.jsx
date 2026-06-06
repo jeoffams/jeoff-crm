@@ -1066,7 +1066,7 @@ const LoginScreen = () => {
   };
   const onKey = (e) => { if (e.key === "Enter") handleLogin(); };
   return (
-    <div style={{ position:"fixed", inset:0, background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+    <div style={{ position:"fixed", inset:0, background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Open Sans',Arial,sans-serif" }}>
       <Logo />
       <div style={{ marginTop:40, width:320 }}>
         <div style={{ textAlign:"center", marginBottom:28 }}><div style={{ fontSize:14, fontWeight:700, fontFamily:"'Lora',serif", color:C.muted }}>Sign in to your CRM</div></div>
@@ -1083,10 +1083,10 @@ const LoginScreen = () => {
             </button>
           </div>
           {error && <div style={{ fontSize:12, color:R, textAlign:"center" }}>{error}</div>}
-          <button onClick={handleLogin} disabled={loading || !email || !password} style={{ background: loading ? "#ccc" : R, color:"#fff", border:"none", borderRadius:7, padding:"12px", cursor: loading ? "not-allowed" : "pointer", fontSize:13, fontWeight:700, marginTop:4 }}>{loading ? "Signing in..." : "Sign In"}</button>
+          <button onClick={handleLogin} disabled={loading || !email || !password} style={{ background: loading ? "#ccc" : R, color:"#fff", border:"none", borderRadius:7, padding:"12px", cursor: loading ? "not-allowed" : "pointer", fontSize:13, fontWeight:700, fontFamily:"'Lora',serif", letterSpacing:"0.02em", marginTop:4 }}>{loading ? "Signing in..." : "Sign In"}</button>
         </div>
       </div>
-      <div style={{ position:"absolute", bottom:28, fontSize:10, color:"#ddd" }}>jeoff.nl · private</div>
+      <div style={{ position:"absolute", bottom:28, fontSize:11, color:"#ccc", fontFamily:"'Open Sans',Arial,sans-serif", letterSpacing:"0.05em" }}>jeoff.nl · private</div>
     </div>
   );
 };
@@ -1435,7 +1435,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily:"'Open Sans',Arial,sans-serif", background:C.bg, minHeight:"100vh", color:C.text }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700&family=Lora:ital,wght@0,400;0,700&display=swap');
+      <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.3 } }
         @keyframes bar { 0% { width:4% } 75% { width:89% } 100% { width:95% } }
