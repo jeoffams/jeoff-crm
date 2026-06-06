@@ -204,7 +204,7 @@ const EditCell = ({ value, onSave, multi }) => {
   if (editing) {
     if (multi) return (
       <textarea autoFocus value={v} onChange={(e) => setV(e.target.value)} onBlur={() => { setEditing(false); onSave(v); }} rows={3}
-        style={{ width:"100%", border:`1px solid ${R}`, borderRadius:4, padding:"4px 6px", fontSize:11, fontFamily:"inherit", resize:"vertical", outline:"none", background:"#fff", color:C.text }} />
+        style={{ width:"100%", border:`1px solid ${R}`, borderRadius:4, padding:"4px 6px", fontSize:11, fontFamily:"inherit", resize:"both", outline:"none", background:"#fff", color:C.text }} />
     );
     return (
       <input autoFocus type="text" value={v} onChange={(e) => setV(e.target.value)} onBlur={() => { setEditing(false); onSave(v); }} onKeyDown={(e) => { if (e.key==="Enter") { setEditing(false); onSave(v); } }}
@@ -355,7 +355,7 @@ const GlobalSearch = ({ q, warm, newL, ag, br, crew, fl, ct, onGo }) => {
 };
 
 // ── Overview ──────────────────────────────────────────────────────────────────
-const Overview = ({ warm, newL, ag, br, fl, ct }) => {
+const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChange }) => {
   const upcoming = warm.filter((w) => { const d = daysUntil(w.nextActionDate); return d >= -3 && d <= 14; }).sort((a,b) => daysUntil(a.nextActionDate)-daysUntil(b.nextActionDate));
   const stale = warm.filter((w) => daysUntil(w.nextActionDate) < -7 && w.stage !== "Won" && w.stage !== "Paused");
   const pipeData = ["Radar","Nurturing","Conversation","Proposal","Won"].map((s) => ({ name:s, v:warm.filter((w) => w.stage===s).length }));
@@ -363,6 +363,24 @@ const Overview = ({ warm, newL, ag, br, fl, ct }) => {
   const appliedJobs = allJobs.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
   const appData = ["Applied","No Response","Conversation","Offer","Rejected"].map((s) => ({ name:s, v:appliedJobs.filter((j) => j.status===s).length })).filter((d) => d.v>0);
   const newJobs = fl.filter((j) => j.isNew).length + ct.filter((j) => j.isNew).length;
+  const pencils = _pencils || [];
+  const [addingPencil, setAddingPencil] = useState(false);
+  const [newPen, setNewPen] = useState({ person:"", company:"", rate:"", startDate:"", endDate:"", type:"Pencil" });
+  const savePen = () => {
+    if (!newPen.company||!newPen.startDate||!newPen.endDate) return;
+    onPencilChange&&onPencilChange([...pencils, { ...newPen, id:uid() }]);
+    setNewPen({ person:"", company:"", rate:"", startDate:"", endDate:"", type:"Pencil" });
+    setAddingPencil(false);
+  };
+  const togglePenType = (id) => { onPencilChange&&onPencilChange(pencils.map(p=>p.id===id?{...p,type:p.type==="Pencil"?"Booking":"Pencil"}:p)); };
+  const deletePen = (id) => { onPencilChange&&onPencilChange(pencils.filter(p=>p.id!==id)); };
+  const tNow = new Date(); tNow.setHours(0,0,0,0);
+  const tWS = new Date(tNow); tWS.setDate(tWS.getDate()-7);
+  const tWE = new Date(tNow); tWE.setDate(tWE.getDate()+127);
+  const tSpan = tWE - tWS;
+  const tPct = (d) => (Math.max(0,Math.min(100,((d-tWS)/tSpan)*100)).toFixed(1)+'%');
+  const tBar = (en) => { const s=parseDate(en.startDate),e=parseDate(en.endDate); if(!s||!e)return null; const l=Math.max(0,((s-tWS)/tSpan)*100),r=Math.min(100,((e-tWS)/tSpan)*100); return {left:l.toFixed(1)+'%',width:Math.max(1.5,r-l).toFixed(1)+'%'}; };
+  const tMonths=[]; { const d=new Date(tWS); d.setDate(1); if(d<tWS)d.setMonth(d.getMonth()+1); while(d<=tWE){ tMonths.push({label:d.toLocaleString('en',{month:'short'})+" '"+((''+d.getFullYear()).slice(2)),pct:tPct(d)}); d.setMonth(d.getMonth()+1); } }
   return (
     <div style={{ padding:"16px 20px" }}>
       <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:20 }}>
@@ -449,6 +467,79 @@ const Overview = ({ warm, newL, ag, br, fl, ct }) => {
           </div>
         </div>
       )}
+      {/* ── Current Availability ────────────────────────────────────────────────────── */}
+      <div style={{ marginTop:20, background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, overflow:"hidden" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 16px", borderBottom:`1px solid ${C.border}`, background:"#fafafa" }}>
+          <div style={{ fontSize:12, fontWeight:700, color:C.text }}>Current Availability</div>
+          <button onClick={() => setAddingPencil(true)} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:11, fontWeight:700 }}>+ Add</button>
+        </div>
+
+        {addingPencil && (
+          <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, background:"#fff8f7", display:"flex", flexWrap:"wrap", gap:8, alignItems:"flex-end" }}>
+            {[["CONTACT","person","e.g. Tommaso",90],["COMPANY","company","Monks",120],[String.fromCharCode(8364)+"/DAY","rate","600",65],["FROM (DD/MM/YY)","startDate","15/06/26",105],["TO (DD/MM/YY)","endDate","31/08/26",105]].map(([lbl,key,ph,w])=>(
+              <div key={key} style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                <span style={{ fontSize:9, color:C.muted, fontWeight:700 }}>{lbl}</span>
+                <input value={newPen[key]} onChange={e=>setNewPen(p=>({...p,[key]:e.target.value}))} placeholder={ph} style={{ border:`1px solid ${C.border}`, borderRadius:5, padding:"5px 8px", fontSize:12, width:w, outline:"none" }} />
+              </div>
+            ))}
+            <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+              <span style={{ fontSize:9, color:C.muted, fontWeight:700 }}>TYPE</span>
+              <button onClick={()=>setNewPen(p=>({...p,type:p.type==="Pencil"?"Booking":"Pencil"}))} style={{ background:newPen.type==="Booking"?"#10b981":"#f59e0b", color:"#fff", border:"none", borderRadius:5, padding:"5px 10px", cursor:"pointer", fontSize:11, fontWeight:700, width:80 }}>{newPen.type==="Booking"?"✓ Booking":"✏ Pencil"}</button>
+            </div>
+            <div style={{ display:"flex", gap:6, paddingBottom:1 }}>
+              <button onClick={savePen} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"5px 14px", cursor:"pointer", fontSize:11, fontWeight:700 }}>Save</button>
+              <button onClick={()=>setAddingPencil(false)} style={{ background:"none", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"5px 10px", cursor:"pointer", fontSize:11 }}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {pencils.length===0 && !addingPencil && (
+          <div style={{ padding:"20px 16px", fontSize:12, color:C.muted }}>No pencils or bookings yet — click + Add to log one.</div>
+        )}
+
+        {pencils.length>0 && (
+          <div>
+            {/* Timeline header */}
+            <div style={{ display:"flex" }}>
+              <div style={{ width:230, flexShrink:0, borderRight:`1px solid ${C.border}`, background:"#f9f9f9" }} />
+              <div style={{ flex:1, position:"relative", height:26, background:"#f9f9f9", borderBottom:`1px solid ${C.border}` }}>
+                {tMonths.map((m,i)=>(
+                  <div key={i} style={{ position:"absolute", left:m.pct, top:6, fontSize:9, fontWeight:700, color:C.muted, whiteSpace:"nowrap", transform:"translateX(-50%)", pointerEvents:"none" }}>{m.label}</div>
+                ))}
+                <div style={{ position:"absolute", left:tPct(tNow), top:0, bottom:0, width:2, background:R, opacity:0.5 }} />
+              </div>
+            </div>
+            {/* Rows */}
+            {pencils.map(p => {
+              const bar = tBar(p);
+              const isBook = p.type==="Booking";
+              const col = isBook ? "#10b981" : "#f59e0b";
+              return (
+                <div key={p.id} style={{ display:"flex", alignItems:"stretch", borderBottom:`1px solid ${C.border}`, minHeight:40 }}>
+                  <div style={{ width:230, flexShrink:0, padding:"6px 10px", borderRight:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:6 }}>
+                    <button onClick={()=>togglePenType(p.id)} style={{ background:col, color:"#fff", border:"none", borderRadius:4, padding:"2px 7px", cursor:"pointer", fontSize:9, fontWeight:700, flexShrink:0, whiteSpace:"nowrap" }}>{isBook?"✓ Booking":"✏ Pencil"}</button>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontSize:11, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.company||"—"}</div>
+                      <div style={{ fontSize:10, color:C.muted, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{[p.person, p.rate?(String.fromCharCode(8364)+p.rate+'/d'):null].filter(Boolean).join(' · ')}</div>
+                    </div>
+                  </div>
+                  <div style={{ flex:1, position:"relative" }}>
+                    <div style={{ position:"absolute", left:tPct(tNow), top:0, bottom:0, width:2, background:R, opacity:0.15 }} />
+                    {bar && (
+                      <div style={{ position:"absolute", top:"50%", transform:"translateY(-50%)", left:bar.left, width:bar.width, height:18, background:isBook?col:col+'28', border:isBook?"none":`2px dashed ${col}`, borderRadius:4, display:"flex", alignItems:"center", overflow:"hidden" }}>
+                        <span style={{ fontSize:9, color:isBook?"#fff":col, fontWeight:700, padding:"0 5px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.startDate}{p.endDate?' → '+p.endDate:''}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flexShrink:0, display:"flex", alignItems:"center", padding:"0 8px" }}>
+                    <button onClick={()=>deletePen(p.id)} style={{ background:"none", border:"none", cursor:"pointer", color:C.muted, fontSize:16, lineHeight:1, padding:2 }}>×</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -519,7 +610,7 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
                           {l.nextActionDate && <span style={{ fontSize:10, color:dc, flexShrink:0 }}>{du<0 ? `${Math.abs(du)}d over` : du===0 ? "today" : `${du}d`}</span>}
                         </div>
                       </td>
-                      <td style={{ padding:"8px 10px", minWidth:180, verticalAlign:"top" }}>
+                      <td style={{ padding:"8px 10px", minWidth:180, maxWidth:360, verticalAlign:"top", resize:"horizontal", overflow:"hidden" }}>
                         <EditCell value={l.notes} onSave={(v) => onUpdate(l.id,"notes",v)} multi />
                       </td>
                       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
@@ -723,7 +814,7 @@ const AgTab = ({ data, onUpdate, onAdd, onDelete, warm, leads }) => {
               <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
                 <Sel value={a.status||"Find contact"} opts={["Find contact","Reached out","In Warm Leads","New Lead added","Prior client","Conversation","Won"]} onChange={(v) => onUpdate(a.id,"status",v)} />
               </td>
-              <td style={{ padding:"8px 10px", minWidth:180, verticalAlign:"top" }}>
+              <td style={{ padding:"8px 10px", minWidth:180, maxWidth:360, verticalAlign:"top", resize:"horizontal", overflow:"hidden" }}>
                 <EditCell value={a.notes} onSave={(v) => onUpdate(a.id,"notes",v)} multi />
                 {(() => {
                   const linked = getLinked(a.name);
@@ -878,7 +969,7 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass }) => {
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
         <Sel value={j.status||"New"} opts={["New","Researching","Applied","No Response","Conversation","Offer","Rejected"]} onChange={(v) => onUpdate(j.id,"status",v)} cf={jobCol} />
       </td>
-      <td style={{ padding:"8px 10px", minWidth:180, verticalAlign:"top" }}><EditCell value={j.notes} onSave={(v) => onUpdate(j.id,"notes",v)} multi /></td>
+      <td style={{ padding:"8px 10px", minWidth:180, maxWidth:360, verticalAlign:"top", resize:"horizontal", overflow:"hidden" }}><EditCell value={j.notes} onSave={(v) => onUpdate(j.id,"notes",v)} multi /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
         <WebsiteCell value={j.source||""} onSave={(v) => onUpdate(j.id,"source",v)} />
       </td>
@@ -936,6 +1027,7 @@ const LoginScreen = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const handleLogin = async () => {
     if (!email || !password) return;
     setLoading(true); setError("");
@@ -947,10 +1039,19 @@ const LoginScreen = () => {
     <div style={{ position:"fixed", inset:0, background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
       <Logo />
       <div style={{ marginTop:40, width:320 }}>
-        <div style={{ textAlign:"center", marginBottom:28 }}><div style={{ fontSize:13, color:C.muted }}>Sign in to your CRM</div></div>
+        <div style={{ textAlign:"center", marginBottom:28 }}><div style={{ fontSize:14, fontWeight:700, color:C.muted }}>Sign in to your CRM</div></div>
         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={onKey} autoFocus style={{ border:`1px solid ${C.border}`, borderRadius:7, padding:"11px 14px", fontSize:13, outline:"none", fontFamily:"inherit", width:"100%", boxSizing:"border-box" }} />
-          <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onKey} style={{ border:`1px solid ${C.border}`, borderRadius:7, padding:"11px 14px", fontSize:13, outline:"none", fontFamily:"inherit", width:"100%", boxSizing:"border-box" }} />
+          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={onKey} autoFocus style={{ border:`1px solid ${C.border}`, borderRadius:7, padding:"11px 14px", fontSize:13, fontWeight:600, outline:"none", fontFamily:"inherit", width:"100%", boxSizing:"border-box" }} />
+          <div style={{ position:"relative" }}>
+            <input type={showPw?"text":"password"} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onKey} style={{ border:`1px solid ${C.border}`, borderRadius:7, padding:"11px 42px 11px 14px", fontSize:13, fontWeight:600, outline:"none", fontFamily:"inherit", width:"100%", boxSizing:"border-box" }} />
+            <button onClick={() => setShowPw(p=>!p)} tabIndex={-1} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", padding:0, color:C.muted, display:"flex", alignItems:"center" }}>
+              {showPw ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              )}
+            </button>
+          </div>
           {error && <div style={{ fontSize:12, color:R, textAlign:"center" }}>{error}</div>}
           <button onClick={handleLogin} disabled={loading || !email || !password} style={{ background: loading ? "#ccc" : R, color:"#fff", border:"none", borderRadius:7, padding:"12px", cursor: loading ? "not-allowed" : "pointer", fontSize:13, fontWeight:700, marginTop:4 }}>{loading ? "Signing in..." : "Sign In"}</button>
         </div>
@@ -982,6 +1083,7 @@ export default function App() {
   const [br, setBr]       = useState(SBr);
   const [fl, setFl]       = useState([]);
   const [ct, setCt]       = useState([]);
+  const [pencils, setPencils] = useState([]);
   const [crew, setCrew]   = useState(SCr);
   const [tab, setTab]     = useState("overview");
   const [msg, setMsg]     = useState(null);
@@ -1038,9 +1140,9 @@ export default function App() {
       try {
         // ── Load from Supabase ──────────────────────────────────────────────
         setLoadStatus("Loading your CRM from database...");
-        const [w,n,a,b,cr,f,c,sid] = await Promise.all([
+        const [w,n,a,b,cr,f,c,sid,pen] = await Promise.all([
           db.get("jw"), db.get("jn"), db.get("ja"), db.get("jb"),
-          db.get("jcr"), db.get("jf"), db.get("jc"), db.get("jsid")
+          db.get("jcr"), db.get("jf"), db.get("jc"), db.get("jsid"), db.get("jpen")
         ]);
 
         const loadedAg=(a&&a.length)?a:SAg;
@@ -1066,6 +1168,7 @@ export default function App() {
         if (n&&n.length) setNewL(n); else { setNewL(SN); db.set("jn", SN); }
         setAg(loadedAg); if(!a||!a.length)db.set("ja",loadedAg);
         setBr(loadedBr); if(!b||!b.length)db.set("jb",loadedBr);
+        if(pen&&pen.length) setPencils(pen);
         if (cr&&cr.length) setCrew(cr); else { setCrew(SCr); db.set("jcr", SCr); }
 
         let baseFl = f || [], baseCt = c || [];
@@ -1336,6 +1439,9 @@ export default function App() {
               {msg}<button onClick={() => setMsg(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"#16a34a", fontSize:14, lineHeight:1, padding:0 }}>x</button>
             </div>
           )}
+          <button onClick={() => supabase.auth.signOut()} title="Lock CRM" style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 9px", cursor:"pointer", display:"flex", alignItems:"center" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </button>
           <button onClick={exportData} style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", cursor:"pointer", fontSize:11, fontWeight:600 }}>Export</button>
 
           <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
@@ -1363,7 +1469,7 @@ export default function App() {
 
       {/* Content */}
       <div style={{ maxWidth:1600, margin:"0 auto", paddingTop:20 }}>
-        {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} />}
+        {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} pencils={pencils} onPencilChange={(p)=>{ setPencils(p); db.set("jpen",p); }} />}
         {tab==="warm"      && <WarmTab leads={warm} onUpdate={upd("jw",setWarm)} onStageChange={warmStageChange} onAdd={add(setWarm,"jw",{name:"",role:"",company:"",email:"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"",notes:""})} onDelete={del("jw",setWarm)} onArchive={archiveToLeads} />}
         {tab==="leads"     && <LeadsTab leads={newL} onUpdate={upd("jn",setNewL)} onAdd={add(setNewL,"jn",{name:"",role:"",company:"",contact:"LinkedIn",tier:"A – Agency",stage:"New",dateAdded:nowStr(),notes:""})} onPromote={promoteToWarm} onDelete={del("jn",setNewL)} />}
         {tab==="agencies"  && <AgTab   data={ag}    onUpdate={updAgAndWarm}   onAdd={add(setAg,"ja",{name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""})} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
