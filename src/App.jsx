@@ -374,6 +374,12 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
   };
   const togglePenType = (id) => { onPencilChange&&onPencilChange(pencils.map(p=>p.id===id?{...p,type:p.type==="Pencil"?"Booking":"Pencil"}:p)); };
   const deletePen = (id) => { onPencilChange&&onPencilChange(pencils.filter(p=>p.id!==id)); };
+  const [editPenId,setEditPenId] = useState(null);
+  const [editPen,setEditPen] = useState(null);
+  const startEditPen = (p) => { setEditPenId(p.id); setEditPen({...p}); };
+  const saveEditPen = () => { if(editPen){ onPencilChange&&onPencilChange(pencils.map(p=>p.id===editPenId?{...editPen}:p)); } setEditPenId(null); setEditPen(null); };
+  const cancelEditPen = () => { setEditPenId(null); setEditPen(null); };
+  const movePen = (id,dir) => { const idx=pencils.findIndex(p=>p.id===id); if(idx<0)return; const arr=[...pencils]; const ni=idx+dir; if(ni<0||ni>=arr.length)return; [arr[idx],arr[ni]]=[arr[ni],arr[idx]]; onPencilChange&&onPencilChange(arr); };
   const tNow = new Date(); tNow.setHours(0,0,0,0);
   const tWS = new Date(tNow); tWS.setDate(tWS.getDate()-7);
   const tWE = new Date(tNow); tWE.setDate(tWE.getDate()+127);
@@ -394,7 +400,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           newJobs > 0 ? { label:"New Jobs", val:newJobs, sub:"from last sweep" } : null,
         ].filter(Boolean).map((s, i) => (
           <div key={i} style={{ background: s.alert ? "#fff5f5" : "#fff", border:`1px solid ${s.alert ? R+"44" : C.border}`, borderRadius:8, padding:"14px 18px", minWidth:110 }}>
-            <div style={{ fontSize:26, fontWeight:700, color: s.alert ? R : R }}>{s.val}</div>
+            <div style={{ fontSize:26, fontWeight:700, fontFamily:"'Lora',serif", color: s.alert ? R : R }}>{s.val}</div>
             <div style={{ fontSize:11, fontWeight:600, color: s.alert ? R : C.text, marginTop:2 }}>{s.label}</div>
             <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{s.sub}</div>
           </div>
@@ -510,14 +516,36 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
               </div>
             </div>
             {/* Rows */}
-            {pencils.map(p => {
+            {pencils.map((p,pIdx) => {
+              if(editPenId===p.id && editPen) return (
+                <div key={p.id} style={{ display:"flex", flexWrap:"wrap", gap:6, padding:"8px 12px", borderBottom:`1px solid ${C.border}`, background:"#fffbf5", alignItems:"flex-end" }}>
+                  {[["CONTACT","person","e.g. Tommaso",90],["COMPANY","company","Monks",110],[String.fromCharCode(8364)+"/DAY","rate","600",65],["FROM","startDate","15/06/26",100],["TO","endDate","31/08/26",100]].map(([lbl,key,ph,w])=>(
+                    <div key={key} style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                      <span style={{ fontSize:9, color:C.muted, fontWeight:700 }}>{lbl}</span>
+                      <input value={editPen[key]||""} onChange={e=>setEditPen(p=>({...p,[key]:e.target.value}))} placeholder={ph} style={{ border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 7px", fontSize:11, width:w, outline:"none" }} />
+                    </div>
+                  ))}
+                  <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                    <span style={{ fontSize:9, color:C.muted, fontWeight:700 }}>TYPE</span>
+                    <button onClick={()=>setEditPen(p=>({...p,type:p.type==="Pencil"?"Booking":"Pencil"}))} style={{ background:editPen.type==="Booking"?"#10b981":"#f59e0b", color:"#fff", border:"none", borderRadius:5, padding:"4px 9px", cursor:"pointer", fontSize:10, fontWeight:700, width:80 }}>{editPen.type==="Booking"?"✓ Booking":"✏ Pencil"}</button>
+                  </div>
+                  <div style={{ display:"flex", gap:5, paddingBottom:1 }}>
+                    <button onClick={saveEditPen} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"4px 12px", cursor:"pointer", fontSize:10, fontWeight:700 }}>Save</button>
+                    <button onClick={cancelEditPen} style={{ background:"none", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 9px", cursor:"pointer", fontSize:10 }}>Cancel</button>
+                  </div>
+                </div>
+              );
               const bar = tBar(p);
               const isBook = p.type==="Booking";
               const col = isBook ? "#10b981" : "#f59e0b";
               return (
                 <div key={p.id} style={{ display:"flex", alignItems:"stretch", borderBottom:`1px solid ${C.border}`, minHeight:40 }}>
-                  <div style={{ width:230, flexShrink:0, padding:"6px 10px", borderRight:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:6 }}>
-                    <button onClick={()=>togglePenType(p.id)} style={{ background:col, color:"#fff", border:"none", borderRadius:4, padding:"2px 7px", cursor:"pointer", fontSize:9, fontWeight:700, flexShrink:0, whiteSpace:"nowrap" }}>{isBook?"✓ Booking":"✏ Pencil"}</button>
+                  <div style={{ width:230, flexShrink:0, padding:"6px 6px 6px 8px", borderRight:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:5 }}>
+                    <div style={{ display:"flex", flexDirection:"column", gap:1, flexShrink:0 }}>
+                      <button onClick={()=>movePen(p.id,-1)} disabled={pIdx===0} style={{ background:"none", border:"none", cursor:pIdx===0?"default":"pointer", color:pIdx===0?C.border:C.muted, fontSize:10, padding:"1px 3px", lineHeight:1 }}>▴</button>
+                      <button onClick={()=>movePen(p.id,1)} disabled={pIdx===pencils.length-1} style={{ background:"none", border:"none", cursor:pIdx===pencils.length-1?"default":"pointer", color:pIdx===pencils.length-1?C.border:C.muted, fontSize:10, padding:"1px 3px", lineHeight:1 }}>▾</button>
+                    </div>
+                    <button onClick={()=>togglePenType(p.id)} style={{ background:col, color:"#fff", border:"none", borderRadius:4, padding:"2px 6px", cursor:"pointer", fontSize:9, fontWeight:700, flexShrink:0, whiteSpace:"nowrap" }}>{isBook?"✓ Booking":"✏ Pencil"}</button>
                     <div style={{ minWidth:0 }}>
                       <div style={{ fontSize:11, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.company||"—"}</div>
                       <div style={{ fontSize:10, color:C.muted, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{[p.person, p.rate?(String.fromCharCode(8364)+p.rate+'/d'):null].filter(Boolean).join(' · ')}</div>
@@ -531,7 +559,8 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
                       </div>
                     )}
                   </div>
-                  <div style={{ flexShrink:0, display:"flex", alignItems:"center", padding:"0 8px" }}>
+                  <div style={{ flexShrink:0, display:"flex", alignItems:"center", gap:4, padding:"0 8px" }}>
+                    <button onClick={()=>startEditPen(p)} style={{ background:"none", border:"none", cursor:"pointer", color:C.muted, fontSize:12, lineHeight:1, padding:2 }}>✏</button>
                     <button onClick={()=>deletePen(p.id)} style={{ background:"none", border:"none", cursor:"pointer", color:C.muted, fontSize:16, lineHeight:1, padding:2 }}>×</button>
                   </div>
                 </div>
@@ -943,7 +972,7 @@ const CrewTab = ({ data, onUpdate, onAdd, onDelete }) => {
 };
 
 // ── Jobs Tab ──────────────────────────────────────────────────────────────────
-const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass }) => {
+const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onDelete }) => {
   const active  = data.filter((j) => ["New","Researching"].includes(j.status||"New"));
   const applied = data.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
   const passed  = data.filter((j) => j.status === "Passed");
@@ -981,11 +1010,12 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass }) => {
         {j.appliedDate ? (
           <button onClick={() => onUndo(j.id)} style={{ background:"#f8fafc", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>Undo</button>
         ) : j.status === "Passed" ? (
-          <span style={{ fontSize:10, color:C.muted, fontStyle:"italic" }}>Passed</span>
+          <div style={{ display:"flex", flexDirection:"column", gap:2 }}><span style={{ fontSize:10, color:C.muted, fontStyle:"italic" }}>Passed</span><button onClick={() => onDelete&&onDelete(j.id)} style={{ background:"none", color:C.muted, border:"none", cursor:"pointer", fontSize:9, padding:0, opacity:0.5 }}>× delete</button></div>
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
             <button onClick={() => onApply(j.id)} style={{ background:"#fff5f5", color:R, border:`1px solid ${R}`, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:10, fontWeight:700, whiteSpace:"nowrap" }}>Applied</button>
             <button onClick={() => onPass(j.id)} style={{ background:"#f8f8f8", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>Pass</button>
+            <button onClick={() => onDelete&&onDelete(j.id)} style={{ background:"none", color:C.muted, border:"none", cursor:"pointer", fontSize:9, padding:"2px 0", opacity:0.6 }}>× delete</button>
           </div>
         )}
       </td>
@@ -1039,7 +1069,7 @@ const LoginScreen = () => {
     <div style={{ position:"fixed", inset:0, background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
       <Logo />
       <div style={{ marginTop:40, width:320 }}>
-        <div style={{ textAlign:"center", marginBottom:28 }}><div style={{ fontSize:14, fontWeight:700, color:C.muted }}>Sign in to your CRM</div></div>
+        <div style={{ textAlign:"center", marginBottom:28 }}><div style={{ fontSize:14, fontWeight:700, fontFamily:"'Lora',serif", color:C.muted }}>Sign in to your CRM</div></div>
         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
           <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={onKey} autoFocus style={{ border:`1px solid ${C.border}`, borderRadius:7, padding:"11px 14px", fontSize:13, fontWeight:600, outline:"none", fontFamily:"inherit", width:"100%", boxSizing:"border-box" }} />
           <div style={{ position:"relative" }}>
@@ -1216,9 +1246,14 @@ export default function App() {
         let _baseFl = baseFl, _baseCt = baseCt;
         if (SWEEP_ID && SWEEP_ID!==sid && LATEST_SWEEP.length>0) {
           const sweepDate = SWEEP_ID.split("-")[0];
-          const existing = new Set([..._baseFl,..._baseCt].map((j) => (j.company||"")+("|")+(j.role||"")));
-          const nFl = LATEST_SWEEP.filter((j) => j.type==="Freelance" && !existing.has(j.company+"|"+j.role)).map((j) => ({ ...j,id:uid(),date:sweepDate,status:"New",isNew:true }));
-          const nCt = LATEST_SWEEP.filter((j) => j.type==="Contract" && !existing.has(j.company+"|"+j.role)).map((j) => ({ ...j,id:uid(),date:sweepDate,status:"New",isNew:true }));
+          // Normalise company name for dedup (case + punctuation insensitive)
+          const normCo=(s)=>(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+          // One-time: deduplicate existing jobs by company (keep acted-on / latest)
+          const dedupArr=(arr)=>{ const seen=new Set(); return arr.filter(j=>{ const k=normCo(j.company); if(seen.has(k))return false; seen.add(k); return true; }); };
+          _baseFl=dedupArr(_baseFl); _baseCt=dedupArr(_baseCt);
+          const existing = new Set([..._baseFl,..._baseCt].map((j)=>normCo(j.company)));
+          const nFl = LATEST_SWEEP.filter((j) => j.type==="Freelance" && !existing.has(normCo(j.company))).map((j) => ({ ...j,id:uid(),date:sweepDate,status:"New",isNew:true }));
+          const nCt = LATEST_SWEEP.filter((j) => j.type==="Contract" && !existing.has(normCo(j.company))).map((j) => ({ ...j,id:uid(),date:sweepDate,status:"New",isNew:true }));
           _baseFl = [..._baseFl,...nFl]; _baseCt = [..._baseCt,...nCt];
           await Promise.all([db.set("jf",_baseFl),db.set("jc",_baseCt),db.set("jsid",SWEEP_ID)]);
           if (nFl.length+nCt.length>0) setMsg(nFl.length+" freelance + "+nCt.length+" contract jobs loaded from last sweep.");
@@ -1399,8 +1434,8 @@ export default function App() {
   if (!appReady) return <LoadingScreen status={loadStatus} />;
 
   return (
-    <div style={{ fontFamily:"system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", background:C.bg, minHeight:"100vh", color:C.text }}>
-      <style>{`
+    <div style={{ fontFamily:"'Open Sans',Arial,sans-serif", background:C.bg, minHeight:"100vh", color:C.text }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700&family=Lora:ital,wght@0,400;0,700&display=swap');
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.3 } }
         @keyframes bar { 0% { width:4% } 75% { width:89% } 100% { width:95% } }
@@ -1460,7 +1495,7 @@ export default function App() {
       <div style={{ background:"#fff", borderBottom:`1px solid ${C.border}`, padding:"0 20px", display:"flex", overflowX:"auto", gap:2 }}>
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ background:"none", border:"none", borderBottom:tab===t.id?`2px solid ${R}`:"2px solid transparent", color:tab===t.id?R:C.muted, padding:"8px 12px", cursor:"pointer", fontSize:12, fontWeight:tab===t.id?600:400, whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:4, marginBottom:-1 }}>
+            style={{ background:"none", border:"none", borderBottom:tab===t.id?`2px solid ${R}`:"2px solid transparent", color:tab===t.id?R:C.muted, padding:"8px 12px", cursor:"pointer", fontSize:12, fontWeight:tab===t.id?700:500, fontFamily:tab===t.id?"'Lora',serif":"inherit", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:4, marginBottom:-1 }}>
             {t.label}
             {t.badge>0 && <span style={{ background:R, color:"#fff", borderRadius:8, padding:"1px 5px", fontSize:9, fontWeight:700 }}>{t.badge}</span>}
           </button>
@@ -1475,8 +1510,8 @@ export default function App() {
         {tab==="agencies"  && <AgTab   data={ag}    onUpdate={updAgAndWarm}   onAdd={add(setAg,"ja",{name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""})} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
         {tab==="brands"    && <BrTab   data={br}    onUpdate={updBrAndWarm}   onAdd={add(setBr,"jb",{brand:"",contactToFind:"",sector:"",warmIn:"No",priority:"3/5",status:"Cold",notes:""})} onDelete={del("jb",setBr)} />}
         {tab==="crew"      && <CrewTab data={crew}  onUpdate={upd("jcr",setCrew)} onAdd={add(setCrew,"jcr",{name:"",specialty:"Motion Design",rate:"",email:"",website:"",location:"Amsterdam",notes:""})} onDelete={del("jcr",setCrew)} />}
-        {tab==="freelance" && <JobsTab data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} />}
-        {tab==="contract"  && <JobsTab data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} />}
+        {tab==="freelance" && <JobsTab data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} onDelete={del("jf",setFl)} />}
+        {tab==="contract"  && <JobsTab data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} onDelete={del("jc",setCt)} />}
       </div>
 
 
