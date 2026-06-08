@@ -404,7 +404,6 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
   const tPct = (d) => (Math.max(0,Math.min(100,((d-tWS)/tSpan)*100)).toFixed(1)+'%');
   const tBar = (en) => { const s=parseDate(en.startDate),e=parseDate(en.endDate); if(!s||!e)return null; const l=Math.max(0,((s-tWS)/tSpan)*100),r=Math.min(100,((e-tWS)/tSpan)*100); return {left:l.toFixed(1)+'%',width:Math.max(1.5,r-l).toFixed(1)+'%'}; };
   const tMonths=[]; { const d=new Date(tWS); d.setDate(1); if(d<tWS)d.setMonth(d.getMonth()+1); while(d<=tWE){ tMonths.push({label:d.toLocaleString('en',{month:'short'}).toUpperCase(),pct:tPct(d)}); d.setMonth(d.getMonth()+1); } }
-  // Pre-compute per-year timeline (keeps JSX map callbacks clean)
   const yearTimelines = {};
   shownYears.forEach(yr => {
     const ws=new Date(yr,0,1),we=new Date(yr,11,31),sp=we-ws;
@@ -526,10 +525,10 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           </div>
         </div>
       )}
-      {/* ── Bookings & Pencils (multi-year) ───────────────────────────── */}
+      {/* ── Bookings & Pencils ────────────────────────────────────────── */}
       <div style={{ marginTop:20 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-          <div style={{ fontSize:13, fontWeight:700, color:C.text, fontFamily:"'Lora',serif" }}>Bookings & Pencils</div>
+          <div style={{ fontSize:13, fontWeight:700, color:C.text, fontFamily:"'Lora',serif" }}>Bookings {'&'} Pencils</div>
           <button onClick={handleNewYear} style={{ background:"none", color:R, border:`1px solid ${R}`, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:11, fontWeight:700 }}>+ New Year</button>
         </div>
         {shownYears.map(yr => {
@@ -539,7 +538,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           return (
           <div key={yr} style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, overflow:"hidden", marginBottom:12 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 16px", background:"#fafafa", borderBottom:`1px solid ${C.border}` }}>
-              <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"'Lora',serif" }}>Bookings & Pencils {yr}</div>
+              <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"'Lora',serif" }}>Bookings {'&'} Pencils {yr}</div>
               <button onClick={()=>{setAddingForYear(yr);setNewPen(p=>({...p,year:yr}));}} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:11, fontWeight:700 }}>+ Add</button>
             </div>
         {addingForYear===yr && (
