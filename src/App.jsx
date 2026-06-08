@@ -377,13 +377,17 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
   const appData = ["Applied","No Response","Conversation","Offer","Rejected"].map((s) => ({ name:s, v:appliedJobs.filter((j) => j.status===s).length })).filter((d) => d.v>0);
   const newJobs = fl.filter((j) => j.isNew).length + ct.filter((j) => j.isNew).length;
   const pencils = _pencils || [];
-  const [addingPencil, setAddingPencil] = useState(false);
-  const [newPen, setNewPen] = useState({ person:"", company:"", rate:"", startDate:"", endDate:"", type:"Pencil" });
+  const curYear = new Date().getFullYear();
+  const realPencils = pencils.filter(p=>!p.__sentinel);
+  const shownYears = Array.from(new Set(pencils.map(p=>p.year||curYear))).sort((a,b)=>b-a);
+  const handleNewYear = () => { const maxY=shownYears.length?Math.max(...shownYears):curYear; const newY=maxY+1; if(shownYears.includes(newY))return; onPencilChange&&onPencilChange([...pencils,{id:'__y'+newY,__sentinel:true,year:newY}]); };
+  const [addingForYear, setAddingForYear] = useState(null);
+  const [newPen, setNewPen] = useState({ person:"", company:"", rate:"", startDate:"", endDate:"", type:"Pencil", year:new Date().getFullYear() });
   const savePen = () => {
     if (!newPen.company||!newPen.startDate||!newPen.endDate) return;
     onPencilChange&&onPencilChange([...pencils, { ...newPen, id:uid() }]);
-    setNewPen({ person:"", company:"", rate:"", startDate:"", endDate:"", type:"Pencil" });
-    setAddingPencil(false);
+    setNewPen({ person:"", company:"", rate:"", startDate:"", endDate:"", type:"Pencil", year:addingForYear||curYear });
+    setAddingForYear(null);
   };
   const togglePenType = (id) => { onPencilChange&&onPencilChange(pencils.map(p=>p.id===id?{...p,type:p.type==="Pencil"?"Booking":"Pencil"}:p)); };
   const deletePen = (id) => { onPencilChange&&onPencilChange(pencils.filter(p=>p.id!==id)); };
@@ -511,14 +515,26 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           </div>
         </div>
       )}
-      {/* ── Current Availability ────────────────────────────────────────────────────── */}
-      <div style={{ marginTop:20, background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, overflow:"hidden" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 16px", borderBottom:`1px solid ${C.border}`, background:"#fafafa" }}>
-          <div style={{ fontSize:12, fontWeight:700, color:C.text }}>Current Availability</div>
-          <button onClick={() => setAddingPencil(true)} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:11, fontWeight:700 }}>+ Add</button>
+      {/* ── Bookings & Pencils (multi-year) ───────────────────────────── */}
+      <div style={{ marginTop:20 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:C.text, fontFamily:"'Lora',serif" }}>Bookings & Pencils</div>
+          <button onClick={handleNewYear} style={{ background:"none", color:R, border:`1px solid ${R}`, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:11, fontWeight:700 }}>+ New Year</button>
         </div>
-
-        {addingPencil && (
+        {shownYears.map(yr => {
+          const yrEntries = realPencils.filter(p=>(p.year||curYear)===yr);
+          const tWS_y=new Date(yr,0,1),tWE_y=new Date(yr,11,31),tSpan_y=tWE_y-tWS_y;
+          const tNow_y=new Date();tNow_y.setHours(0,0,0,0);
+          const tPct_y=(d)=>(Math.max(0,Math.min(100,((d-tWS_y)/tSpan_y)*100)).toFixed(1)+'%');
+          const tBar_y=(en)=>{const s=parseDate(en.startDate),e=parseDate(en.endDate);if(!s||!e)return null;const l=Math.max(0,((s-tWS_y)/tSpan_y)*100),r=Math.min(100,((e-tWS_y)/tSpan_y)*100);return{left:l.toFixed(1)+'%',width:Math.max(1.5,r-l).toFixed(1)+'%'};};
+          const tMonths_y=[];{const d=new Date(yr,0,1);while(d.getFullYear()===yr){tMonths_y.push({label:d.toLocaleString('en',{month:'short'}).toUpperCase(),pct:tPct_y(d)});d.setMonth(d.getMonth()+1);}}
+          return (
+          <div key={yr} style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, overflow:"hidden", marginBottom:12 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 16px", background:"#fafafa", borderBottom:`1px solid ${C.border}` }}>
+              <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"'Lora',serif" }}>Bookings & Pencils {yr}</div>
+              <button onClick={()=>{setAddingForYear(yr);setNewPen(p=>({...p,year:yr}));}} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:11, fontWeight:700 }}>+ Add</button>
+            </div>
+        {addingForYear===yr && (
           <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, background:"#fff8f7", display:"flex", flexWrap:"wrap", gap:8, alignItems:"flex-end" }}>
             {[["CONTACT","person","e.g. Tommaso",90],["COMPANY","company","Monks",120],[String.fromCharCode(8364)+"/DAY","rate","600",65],["FROM (DD/MM/YY)","startDate","15/06/26",105],["TO (DD/MM/YY)","endDate","31/08/26",105]].map(([lbl,key,ph,w])=>(
               <div key={key} style={{ display:"flex", flexDirection:"column", gap:3 }}>
@@ -532,7 +548,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
             </div>
             <div style={{ display:"flex", gap:6, paddingBottom:1 }}>
               <button onClick={savePen} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"5px 14px", cursor:"pointer", fontSize:11, fontWeight:700 }}>Save</button>
-              <button onClick={()=>setAddingPencil(false)} style={{ background:"none", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"5px 10px", cursor:"pointer", fontSize:11 }}>Cancel</button>
+              <button onClick={()=>setAddingForYear(null)} style={{ background:"none", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"5px 10px", cursor:"pointer", fontSize:11 }}>Cancel</button>
             </div>
           </div>
         )}
@@ -541,7 +557,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           <div style={{ padding:"20px 16px", fontSize:12, color:C.muted }}>No pencils or bookings yet — click + Add to log one.</div>
         )}
 
-        {pencils.length>0 && (
+        {yrEntries.length>0 && (
           <div>
             {/* Scrollable timeline wrapper */}
             <div style={{ overflowX:"auto" }}>
@@ -550,14 +566,14 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
             <div style={{ display:"flex" }}>
               <div style={{ width:230, flexShrink:0, borderRight:`1px solid ${C.border}`, background:"#f9f9f9" }} />
               <div style={{ flex:1, position:"relative", height:26, background:"#f9f9f9", borderBottom:`1px solid ${C.border}` }}>
-                {tMonths.map((m,i)=>(
+                {tMonths_y.map((m,i)=>(
                   <div key={i} style={{ position:"absolute", left:m.pct, top:6, fontSize:9, fontWeight:700, color:C.muted, whiteSpace:"nowrap", transform:"translateX(-50%)", pointerEvents:"none" }}>{m.label}</div>
                 ))}
-                <div style={{ position:"absolute", left:tPct(tNow), top:0, bottom:0, width:2, background:R, opacity:0.5 }} />
+                <div style={{ position:"absolute", left:tPct_y(tNow_y), top:0, bottom:0, width:2, background:R, opacity:0.5 }} />
               </div>
             </div>
             {/* Rows */}
-            {pencils.map((p,pIdx) => {
+            {yrEntries.map((p,pIdx) => {
               if(editPenId===p.id && editPen) return (
                 <div key={p.id} style={{ display:"flex", flexWrap:"wrap", gap:6, padding:"8px 12px", borderBottom:`1px solid ${C.border}`, background:"#fffbf5", alignItems:"flex-end" }}>
                   {[["CONTACT","person","e.g. Tommaso",90],["COMPANY","company","Monks",110],[String.fromCharCode(8364)+"/DAY","rate","600",65],["FROM","startDate","15/06/26",100],["TO","endDate","31/08/26",100]].map(([lbl,key,ph,w])=>(
@@ -576,7 +592,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
                   </div>
                 </div>
               );
-              const bar = tBar(p);
+              const bar = tBar_y(p);
               const isBook = p.type==="Booking";
               const col = isBook ? "#10b981" : "#f59e0b";
               return (
@@ -584,7 +600,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
                   <div style={{ width:230, flexShrink:0, padding:"6px 6px 6px 8px", borderRight:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:5 }}>
                     <div style={{ display:"flex", flexDirection:"column", gap:1, flexShrink:0 }}>
                       <button onClick={()=>movePen(p.id,-1)} disabled={pIdx===0} style={{ background:"none", border:"none", cursor:pIdx===0?"default":"pointer", color:pIdx===0?C.border:C.muted, fontSize:10, padding:"1px 3px", lineHeight:1 }}>▴</button>
-                      <button onClick={()=>movePen(p.id,1)} disabled={pIdx===pencils.length-1} style={{ background:"none", border:"none", cursor:pIdx===pencils.length-1?"default":"pointer", color:pIdx===pencils.length-1?C.border:C.muted, fontSize:10, padding:"1px 3px", lineHeight:1 }}>▾</button>
+                      <button onClick={()=>movePen(p.id,1)} disabled={pIdx===yrEntries.length-1} style={{ background:"none", border:"none", cursor:pIdx===yrEntries.length-1?"default":"pointer", color:pIdx===yrEntries.length-1?C.border:C.muted, fontSize:10, padding:"1px 3px", lineHeight:1 }}>▾</button>
                     </div>
                     <button onClick={()=>togglePenType(p.id)} style={{ background:col, color:"#fff", border:"none", borderRadius:4, padding:"2px 6px", cursor:"pointer", fontSize:9, fontWeight:700, flexShrink:0, whiteSpace:"nowrap" }}>{isBook?"✓ Booking":"✏ Pencil"}</button>
                     <div style={{ minWidth:0 }}>
@@ -611,6 +627,9 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
             </div>
           </div>
         )}
+          </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1588,10 +1607,7 @@ export default function App() {
           <button onClick={exportData} style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", cursor:"pointer", fontSize:11, fontWeight:600 }}>Export</button>
 
           <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
-            <div style={{ fontSize:10, color:"#16a34a", fontWeight:600 }}>✓ Supabase</div>
-            <div style={{ fontSize:8, color:C.muted, textTransform:"uppercase", letterSpacing:"0.4px" }}>saved instantly on every change</div>
-          </div>
-          <div style={{ width:1, height:28, background:C.border, flexShrink:0 }} />
+            
           <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
             <div style={{ fontSize:10, color:C.muted }}>Last sweep: <span style={{ color:C.text, fontWeight:600 }}>{SWEEP_ID.split("-")[0]}</span></div>
             <div style={{ color:C.muted, fontSize:9, textTransform:"uppercase", letterSpacing:"0.7px" }}>Type "Run Sweep" in chat to update</div>
