@@ -1587,8 +1587,7 @@ export default function App() {
           </button>
           <button onClick={exportData} style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", cursor:"pointer", fontSize:11, fontWeight:600 }}>Export</button>
 
-          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
-            
+          
           <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
             <div style={{ fontSize:10, color:C.muted }}>Last sweep: <span style={{ color:C.text, fontWeight:600 }}>{SWEEP_ID.split("-")[0]}</span></div>
             <div style={{ color:C.muted, fontSize:9, textTransform:"uppercase", letterSpacing:"0.7px" }}>Type "Run Sweep" in chat to update</div>
