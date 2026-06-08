@@ -404,6 +404,17 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
   const tPct = (d) => (Math.max(0,Math.min(100,((d-tWS)/tSpan)*100)).toFixed(1)+'%');
   const tBar = (en) => { const s=parseDate(en.startDate),e=parseDate(en.endDate); if(!s||!e)return null; const l=Math.max(0,((s-tWS)/tSpan)*100),r=Math.min(100,((e-tWS)/tSpan)*100); return {left:l.toFixed(1)+'%',width:Math.max(1.5,r-l).toFixed(1)+'%'}; };
   const tMonths=[]; { const d=new Date(tWS); d.setDate(1); if(d<tWS)d.setMonth(d.getMonth()+1); while(d<=tWE){ tMonths.push({label:d.toLocaleString('en',{month:'short'}).toUpperCase(),pct:tPct(d)}); d.setMonth(d.getMonth()+1); } }
+  // Pre-compute per-year timeline (keeps JSX map callbacks clean)
+  const yearTimelines = {};
+  shownYears.forEach(yr => {
+    const ws=new Date(yr,0,1),we=new Date(yr,11,31),sp=we-ws;
+    const tn=new Date(); tn.setHours(0,0,0,0);
+    const pct=(d)=>(Math.max(0,Math.min(100,((d-ws)/sp)*100)).toFixed(1)+'%');
+    const bar=(en)=>{ const s=parseDate(en.startDate),e=parseDate(en.endDate); if(!s||!e)return null; const l=Math.max(0,((s-ws)/sp)*100),r=Math.min(100,((e-ws)/sp)*100); return {left:l.toFixed(1)+'%',width:Math.max(1.5,r-l).toFixed(1)+'%'}; };
+    const months=[]; let md=new Date(yr,0,1);
+    while(md.getFullYear()===yr){ months.push({label:md.toLocaleString('en',{month:'short'}).toUpperCase(),pct:pct(md)}); md.setMonth(md.getMonth()+1); }
+    yearTimelines[yr]={pct,bar,months,tn};
+  });
   return (
     <div style={{ padding:"16px 20px" }}>
       <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:20 }}>
@@ -523,11 +534,8 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
         </div>
         {shownYears.map(yr => {
           const yrEntries = realPencils.filter(p=>(p.year||curYear)===yr);
-          const tWS_y=new Date(yr,0,1),tWE_y=new Date(yr,11,31),tSpan_y=tWE_y-tWS_y;
-          const tNow_y=new Date();tNow_y.setHours(0,0,0,0);
-          const tPct_y=(d)=>(Math.max(0,Math.min(100,((d-tWS_y)/tSpan_y)*100)).toFixed(1)+'%');
-          const tBar_y=(en)=>{const s=parseDate(en.startDate),e=parseDate(en.endDate);if(!s||!e)return null;const l=Math.max(0,((s-tWS_y)/tSpan_y)*100),r=Math.min(100,((e-tWS_y)/tSpan_y)*100);return{left:l.toFixed(1)+'%',width:Math.max(1.5,r-l).toFixed(1)+'%'};};
-          const tMonths_y=[];{const d=new Date(yr,0,1);while(d.getFullYear()===yr){tMonths_y.push({label:d.toLocaleString('en',{month:'short'}).toUpperCase(),pct:tPct_y(d)});d.setMonth(d.getMonth()+1);}}
+          const tl = yearTimelines[yr]||{};
+          const tPct_y=tl.pct||(()=>'0%'), tBar_y=tl.bar||(()=>null), tMonths_y=tl.months||[], tNow_y=tl.tn||new Date();
           return (
           <div key={yr} style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, overflow:"hidden", marginBottom:12 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 16px", background:"#fafafa", borderBottom:`1px solid ${C.border}` }}>
@@ -553,7 +561,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           </div>
         )}
 
-        {pencils.length===0 && !addingPencil && (
+        {yrEntries.length===0 && addingForYear!==yr && (
           <div style={{ padding:"20px 16px", fontSize:12, color:C.muted }}>No pencils or bookings yet — click + Add to log one.</div>
         )}
 
