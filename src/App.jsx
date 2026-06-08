@@ -368,7 +368,7 @@ const GlobalSearch = ({ q, warm, newL, ag, br, crew, fl, ct, onGo }) => {
 };
 
 // ── Overview ──────────────────────────────────────────────────────────────────
-const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChange }) => {
+const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChange, onGoToWarm }) => {
   const upcoming = warm.filter((w) => { const d = daysUntil(w.nextActionDate); return d >= -3 && d <= 14; }).sort((a,b) => daysUntil(a.nextActionDate)-daysUntil(b.nextActionDate));
   const stale = warm.filter((w) => daysUntil(w.nextActionDate) < -7 && w.stage !== "Won" && w.stage !== "Paused");
   const pipeData = ["Radar","Nurturing","Conversation","Proposal","Won"].map((s) => ({ name:s, v:warm.filter((w) => w.stage===s).length }));
@@ -419,6 +419,31 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           </div>
         ))}
       </div>
+
+      {stale.length > 0 && (
+        <div style={{ background:"#fff5f5", border:`1px solid ${R}33`, borderRadius:8, padding:"12px 16px", marginTop:16 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:R, fontFamily:"'Lora',serif" }}>
+              ⚠️ {stale.length} lead{stale.length!==1?"s":""} need follow-up
+            </div>
+            <button onClick={onGoToWarm} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"4px 12px", cursor:"pointer", fontSize:11, fontWeight:700 }}>
+              Go to Warm Leads →
+            </button>
+          </div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+            {stale.map(w => {
+              const d = Math.abs(daysUntil(w.nextActionDate));
+              return (
+                <div key={w.id} onClick={onGoToWarm} style={{ background:"#fff", border:`1px solid ${R}44`, borderRadius:6, padding:"6px 10px", cursor:"pointer", minWidth:160 }}>
+                  <div style={{ fontSize:11, fontWeight:700 }}>{w.name||"(no name)"}</div>
+                  <div style={{ fontSize:10, color:C.muted }}>{w.company||""}</div>
+                  <div style={{ fontSize:10, color:R, marginTop:2, fontWeight:600 }}>{d}d overdue</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16, marginBottom:16 }}>
         <div style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, padding:16 }}>
@@ -599,6 +624,7 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
   const [q, setQ] = useState("");
   const [archivingId, setArchivingId] = useState(null);
   const [archiveReason, setArchiveReason] = useState("");
+  const [viewMode, setViewMode] = useState("table");
   const filtered = q ? leads.filter((l) => (l.name||"").toLowerCase().includes(q.toLowerCase())||(l.company||"").toLowerCase().includes(q.toLowerCase())||(l.role||"").toLowerCase().includes(q.toLowerCase())) : leads;
   const grouped = {};
   WARM_STAGES.forEach((s) => { const g = filtered.filter((l) => (l.stage||"Radar")===s); if (g.length) grouped[s] = g; });
@@ -609,9 +635,59 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
         <input type="text" placeholder="Search name, company, role..." value={q} onChange={(e) => setQ(e.target.value)}
           style={{ border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 10px", fontSize:12, outline:"none", width:220, background:"#fff" }} />
         <AddBtn label="Add Lead" onClick={onAdd} />
-        <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{leads.length} leads</span>
+        <div style={{ display:"flex", gap:4, marginLeft:"auto" }}>
+          <button onClick={()=>setViewMode("table")} style={{ background:viewMode==="table"?R:"none", color:viewMode==="table"?"#fff":C.muted, border:`1px solid ${viewMode==="table"?R:C.border}`, borderRadius:5, padding:"5px 10px", cursor:"pointer", fontSize:11, fontWeight:600 }}>
+            ☰ Table
+          </button>
+          <button onClick={()=>setViewMode("kanban")} style={{ background:viewMode==="kanban"?R:"none", color:viewMode==="kanban"?"#fff":C.muted, border:`1px solid ${viewMode==="kanban"?R:C.border}`, borderRadius:5, padding:"5px 10px", cursor:"pointer", fontSize:11, fontWeight:600 }}>
+            ⊞ Kanban
+          </button>
+        </div>
+        <span style={{ fontSize:11, color:C.muted }}>{leads.length} leads</span>
       </div>
-      {Object.entries(grouped).map(([stage, grp]) => (
+      {viewMode==="kanban" && (
+        <div style={{ display:"flex", gap:12, overflowX:"auto", paddingBottom:8 }}>
+          {WARM_STAGES.filter(s=>s!=="Paused").map(stage => {
+            const cards = filtered.filter(l=>(l.stage||"Radar")===stage);
+            const col = stageCol(stage);
+            return (
+              <div key={stage} style={{ minWidth:220, flex:"0 0 220px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8, padding:"6px 10px", background:col+"18", borderRadius:7, borderLeft:`3px solid ${col}` }}>
+                  <span style={{ fontSize:11, fontWeight:700, color:col }}>{stage}</span>
+                  <span style={{ fontSize:10, color:col, background:col+"22", borderRadius:10, padding:"1px 6px" }}>{cards.length}</span>
+                </div>
+                {cards.map(l => {
+                  const ds = daysSince(l.lastContact);
+                  const du = daysUntil(l.nextActionDate);
+                  const heatDot = ds>14 ? R : ds>7 ? "#d97706" : "#059669";
+                  const stageIdx = WARM_STAGES.indexOf(l.stage||"Radar");
+                  return (
+                    <div key={l.id} style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:7, padding:"10px 12px", marginBottom:8, boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:700 }}>{l.name||"—"}</div>
+                          <div style={{ fontSize:10, color:C.muted }}>{l.company||""}{l.role?(" · "+l.role):""}</div>
+                        </div>
+                        <span style={{ width:8, height:8, borderRadius:"50%", background:heatDot, flexShrink:0, marginTop:3 }} />
+                      </div>
+                      {l.nextAction && <div style={{ fontSize:10, color:C.text, background:"#f8f8f8", borderRadius:4, padding:"4px 6px", marginTop:4 }}>{l.nextAction.substring(0,80)}</div>}
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:8 }}>
+                        <div style={{ display:"flex", gap:3 }}>
+                          {stageIdx>0 && <button onClick={()=>onStageChange(l.id,WARM_STAGES[stageIdx-1])} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:4, padding:"2px 6px", cursor:"pointer", fontSize:9, color:C.muted }}>←</button>}
+                          {stageIdx<WARM_STAGES.length-1 && <button onClick={()=>onStageChange(l.id,WARM_STAGES[stageIdx+1])} style={{ background:col, border:"none", borderRadius:4, padding:"2px 6px", cursor:"pointer", fontSize:9, color:"#fff", fontWeight:700 }}>→</button>}
+                        </div>
+                        <button onClick={()=>{ onUpdate(l.id,"lastContact",nowStr()); onUpdate(l.id,"nextActionDate",plus14()); }} style={{ background:"none", color:"#059669", border:"1px solid #05966944", borderRadius:4, padding:"2px 6px", cursor:"pointer", fontSize:9, fontWeight:600 }}>✓ today</button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {cards.length===0 && <div style={{ fontSize:11, color:C.muted, padding:"12px 8px", textAlign:"center", fontStyle:"italic" }}>Empty</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {viewMode==="table" && Object.entries(grouped).map(([stage, grp]) => (
         <div key={stage} style={{ marginBottom:20 }}>
           <SecHd label={stage} count={grp.length} color={stageCol(stage)} />
           <div style={{ overflowX:"auto" }}>
@@ -695,7 +771,10 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
                             </button>
                           )}
                         </div>
-                        <div style={{ marginTop:6 }}><DeleteBtn onDelete={() => onDelete(l.id)} /></div>
+                        <div style={{ marginTop:4 }}>
+                          <button onClick={()=>{ onUpdate(l.id,"lastContact",nowStr()); onUpdate(l.id,"nextActionDate",plus14()); }} style={{ background:"none", color:"#059669", border:"1px solid #05966944", borderRadius:5, padding:"3px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>✓ Contacted today</button>
+                        </div>
+                        <div style={{ marginTop:4 }}><DeleteBtn onDelete={() => onDelete(l.id)} /></div>
                       </td>
                     </tr>
                   );
@@ -843,7 +922,7 @@ const AgTab = ({ data, onUpdate, onAdd, onDelete, warm, leads }) => {
     <div style={{ overflowX:"auto" }}>
       <table style={{ width:"100%", borderCollapse:"collapse", minWidth:820 }}>
         <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
-          {["AGENCY","CONTACT","EMAIL","WEBSITE","LOCATION","PRIORITY","STATUS","NOTES",""].map((h,i) => <th key={i} style={TH_STYLE}>{h}</th>)}
+          {["AGENCY","CONTACT","EMAIL","WEBSITE","LOCATION","PRIORITY","STATUS","NOTES","LEAD WITH",""].map((h,i) => <th key={i} style={TH_STYLE}>{h}</th>)}
         </tr></thead>
         <tbody>
           {data.map((a) => (
@@ -878,6 +957,10 @@ const AgTab = ({ data, onUpdate, onAdd, onDelete, warm, leads }) => {
                     </div>
                   );
                 })()}
+              </td>
+              <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:170 }}>
+                <EditCell value={a.pitchAngle||""} onSave={(v) => onUpdate(a.id,"pitchAngle",v)} multi />
+                {!a.pitchAngle && <div style={{ fontSize:10, color:C.muted+"88", fontStyle:"italic" }}>e.g. Lead with Adidas embed story</div>}
               </td>
               <td style={{ padding:"8px 10px", verticalAlign:"top" }}><DeleteBtn onDelete={() => onDelete(a.id)} /></td>
             </tr>
@@ -1529,7 +1612,7 @@ export default function App() {
 
       {/* Content */}
       <div style={{ maxWidth:1600, margin:"0 auto", paddingTop:20 }}>
-        {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} pencils={pencils} onPencilChange={(p)=>{ setPencils(p); db.set("jpen",p); }} />}
+        {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} pencils={pencils} onPencilChange={(p)=>{ setPencils(p); db.set("jpen",p); }} onGoToWarm={()=>setTab("warm")} />}
         {tab==="warm"      && <WarmTab leads={warm} onUpdate={upd("jw",setWarm)} onStageChange={warmStageChange} onAdd={add(setWarm,"jw",{name:"",role:"",company:"",email:"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"",notes:""})} onDelete={del("jw",setWarm)} onArchive={archiveToLeads} />}
         {tab==="leads"     && <LeadsTab leads={newL} onUpdate={upd("jn",setNewL)} onAdd={add(setNewL,"jn",{name:"",role:"",company:"",contact:"LinkedIn",tier:"A – Agency",stage:"New",dateAdded:nowStr(),notes:""})} onPromote={promoteToWarm} onDelete={del("jn",setNewL)} />}
         {tab==="agencies"  && <AgTab   data={ag}    onUpdate={updAgAndWarm}   onAdd={add(setAg,"ja",{name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""})} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
