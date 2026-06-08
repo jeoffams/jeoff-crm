@@ -382,6 +382,10 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
   const shownYears = Array.from(new Set(pencils.map(p=>p.year||curYear))).sort((a,b)=>b-a);
   const handleNewYear = () => { const maxY=shownYears.length?Math.max(...shownYears):curYear; const newY=maxY+1; if(shownYears.includes(newY))return; onPencilChange&&onPencilChange([...pencils,{id:'__y'+newY,__sentinel:true,year:newY}]); };
   const [addingForYear, setAddingForYear] = useState(null);
+  const [hiddenYears, setHiddenYears] = useState([]);
+  const [confirmDeleteYear, setConfirmDeleteYear] = useState(null);
+  const toggleHideYear = (yr) => setHiddenYears(h=>h.includes(yr)?h.filter(y=>y!==yr):[...h,yr]);
+  const deleteYear = (yr) => { onPencilChange&&onPencilChange(pencils.filter(p=>(p.year||curYear)!==yr)); setConfirmDeleteYear(null); };
   const [newPen, setNewPen] = useState({ person:"", company:"", rate:"", startDate:"", endDate:"", type:"Pencil", year:new Date().getFullYear() });
   const savePen = () => {
     if (!newPen.company||!newPen.startDate||!newPen.endDate) return;
@@ -539,9 +543,21 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           <div key={yr} style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, overflow:"hidden", marginBottom:12 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 16px", borderBottom:`1px solid ${C.border}`, background:"#fafafa" }}>
               <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"'Lora',serif" }}>Bookings {'&'} Pencils {yr}</div>
-              <button onClick={()=>{setAddingForYear(yr);setNewPen(p=>({...p,year:yr}));}} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:11, fontWeight:700 }}>+ Add</button>
+              <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                <button onClick={()=>toggleHideYear(yr)} style={{ background:"none", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"3px 8px", cursor:"pointer", fontSize:10 }}>{hiddenYears.includes(yr)?'Show ▼':'Hide ▲'}</button>
+                {confirmDeleteYear===yr ? (
+                  <span style={{ fontSize:10, display:"flex", gap:4, alignItems:"center" }}>
+                    <span style={{ color:C.text, fontWeight:600 }}>Sure?</span>
+                    <button onClick={()=>deleteYear(yr)} style={{ background:R, color:"#fff", border:"none", borderRadius:4, padding:"2px 8px", cursor:"pointer", fontSize:10, fontWeight:700 }}>Yes, delete</button>
+                    <button onClick={()=>setConfirmDeleteYear(null)} style={{ background:"none", color:C.muted, border:`1px solid ${C.border}`, borderRadius:4, padding:"2px 7px", cursor:"pointer", fontSize:10 }}>No</button>
+                  </span>
+                ) : (
+                  <button onClick={()=>setConfirmDeleteYear(yr)} style={{ background:"none", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"3px 8px", cursor:"pointer", fontSize:10 }}>Delete year</button>
+                )}
+                {!hiddenYears.includes(yr) && <button onClick={()=>{setAddingForYear(yr);setNewPen(p=>({...p,year:yr}));}} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:11, fontWeight:700 }}>+ Add</button>}
+              </div>
             </div>
-        {addingForYear===yr && (
+        {!hiddenYears.includes(yr) && addingForYear===yr && (
           <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, background:"#fff8f7", display:"flex", flexWrap:"wrap", gap:8, alignItems:"flex-end" }}>
             {[["CONTACT","person","e.g. Tommaso",90],["COMPANY","company","Monks",120],[String.fromCharCode(8364)+"/DAY","rate","600",65],["FROM (DD/MM/YY)","startDate","15/06/26",105],["TO (DD/MM/YY)","endDate","31/08/26",105]].map(([lbl,key,ph,w])=>(
               <div key={key} style={{ display:"flex", flexDirection:"column", gap:3 }}>
@@ -560,11 +576,11 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           </div>
         )}
 
-        {yrEntries.length===0 && addingForYear!==yr && (
+        {!hiddenYears.includes(yr) && yrEntries.length===0 && addingForYear!==yr && (
           <div style={{ padding:"20px 16px", fontSize:12, color:C.muted }}>No pencils or bookings yet — click + Add to log one.</div>
         )}
 
-        {yrEntries.length>0 && (
+        {!hiddenYears.includes(yr) && yrEntries.length>0 && (
           <div>
             {/* Scrollable timeline wrapper */}
             <div style={{ overflowX:"auto" }}>
