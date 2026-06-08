@@ -23,8 +23,8 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 //    → These surface informal "network post" roles before they hit job boards
 // 3. Jellow.nl (if user logged in on Browser 1): browse https://www.jellow.nl/opdrachten for producer/producent
 // 4. Sweep NEVER modifies crew (jcr). Only writes to jf + jc.
-const SWEEP_ID = "05/06/26-1";
-// Sweep 05/06/26: LinkedIn Jobs + Posts — 2 new jobs found.
+const SWEEP_ID = "08/06/26-1";
+// Sweep 08/06/26: LinkedIn Jobs — 2 new contract jobs found. Posts: no signals this week.
 // NOTE: Sweeps never touch crew. Only jf/jc are ever modified by sweep logic.
 const LATEST_SWEEP = [
   // ── Freelance ──────────────────────────────────────────────────────────────────────────
@@ -41,6 +41,8 @@ const LATEST_SWEEP = [
   { company:"Monks",          role:"Senior Producer — Experiential EMEA", type:"Contract", location:"Amsterdam",  sector:"Agency / Production", priority:"High", source:"https://monks.com/careers", notes:"Integrated producer for EMEA experiential team. Strong AI/tech angle. Warm contacts inside (Cas, Tommaso).", date:"04/06/26" },
   { company:"Twine",          role:"Executive Producer — Preschool TV Packaging", type:"Contract", location:"Remote (EU)", sector:"TV / Broadcast", priority:"Medium", source:"https://linkedin.com/jobs", notes:"EP role for preschool TV packaging. Remote within EU.", date:"04/06/26" },
   { company:"DPG Media",      role:"Community Producer Libelle Club",    type:"Contract",  location:"Amsterdam (Hybrid)", sector:"Media / Publishing", priority:"Medium", source:"https://linkedin.com/jobs", notes:"6-month contract. Libelle Club community platform. DPG Media Nederland. 3 connections work here. Not core creative production but strong Dutch media name.", date:"05/06/26" },
+  { company:"DEPT®",        role:"Project Manager (Creative)",         type:"Contract",  location:"Amsterdam / Rotterdam (Hybrid)", sector:"Digital / Agency", priority:"High",   source:"https://job-boards.greenhouse.io/dept/jobs/7957564", notes:"NEW posting. Day-to-day PM on major accounts: Philips, Netflix, Uber, Miele, Grolsch. End-to-end creative projects — content, social, design, 360 campaigns. Requires Dutch fluency. Confirmed active June 2026.", date:"08/06/26" },
+  { company:"Boomerang",       role:"Project Manager",                    type:"Contract",  location:"Amsterdam (Hybrid)", sector:"Agency / Production", priority:"Medium", source:"https://linkedin.com/jobs", notes:"Part of Publicis Groupe. Production-focused agency. Head of Production: Han Schuurman. Posted 2 days ago. Good entry point into Publicis network.", date:"08/06/26" },
 ];
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const mk = (x) => ({ ...x, id: uid() });
@@ -392,12 +394,12 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
   const cancelEditPen = () => { setEditPenId(null); setEditPen(null); };
   const movePen = (id,dir) => { const idx=pencils.findIndex(p=>p.id===id); if(idx<0)return; const arr=[...pencils]; const ni=idx+dir; if(ni<0||ni>=arr.length)return; [arr[idx],arr[ni]]=[arr[ni],arr[idx]]; onPencilChange&&onPencilChange(arr); };
   const tNow = new Date(); tNow.setHours(0,0,0,0);
-  const tWS = new Date(tNow); tWS.setDate(tWS.getDate()-7);
-  const tWE = new Date(tNow); tWE.setDate(tWE.getDate()+127);
+  const tWS = new Date(tNow.getFullYear(), 0, 1); // Jan 1 of current year
+  const tWE = new Date(tNow.getFullYear(), 11, 31); // Dec 31 of current year
   const tSpan = tWE - tWS;
   const tPct = (d) => (Math.max(0,Math.min(100,((d-tWS)/tSpan)*100)).toFixed(1)+'%');
   const tBar = (en) => { const s=parseDate(en.startDate),e=parseDate(en.endDate); if(!s||!e)return null; const l=Math.max(0,((s-tWS)/tSpan)*100),r=Math.min(100,((e-tWS)/tSpan)*100); return {left:l.toFixed(1)+'%',width:Math.max(1.5,r-l).toFixed(1)+'%'}; };
-  const tMonths=[]; { const d=new Date(tWS); d.setDate(1); if(d<tWS)d.setMonth(d.getMonth()+1); while(d<=tWE){ tMonths.push({label:d.toLocaleString('en',{month:'short'})+" '"+((''+d.getFullYear()).slice(2)),pct:tPct(d)}); d.setMonth(d.getMonth()+1); } }
+  const tMonths=[]; { const d=new Date(tWS); d.setDate(1); if(d<tWS)d.setMonth(d.getMonth()+1); while(d<=tWE){ tMonths.push({label:d.toLocaleString('en',{month:'short'}).toUpperCase(),pct:tPct(d)}); d.setMonth(d.getMonth()+1); } }
   return (
     <div style={{ padding:"16px 20px" }}>
       <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:20 }}>
@@ -516,6 +518,9 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
 
         {pencils.length>0 && (
           <div>
+            {/* Scrollable timeline wrapper */}
+            <div style={{ overflowX:"auto" }}>
+            <div style={{ minWidth:900 }}>
             {/* Timeline header */}
             <div style={{ display:"flex" }}>
               <div style={{ width:230, flexShrink:0, borderRight:`1px solid ${C.border}`, background:"#f9f9f9" }} />
@@ -577,6 +582,8 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
                 </div>
               );
             })}
+            </div>
+            </div>
           </div>
         )}
       </div>
