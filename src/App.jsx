@@ -23,8 +23,8 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 //    → These surface informal "network post" roles before they hit job boards
 // 3. Jellow.nl (if user logged in on Browser 1): browse https://www.jellow.nl/opdrachten for producer/producent
 // 4. Sweep NEVER modifies crew (jcr). Only writes to jf + jc.
-const SWEEP_ID = "08/06/26-1";
-// Sweep 08/06/26: LinkedIn Jobs — 2 new contract jobs found. Posts: no signals this week.
+const SWEEP_ID = "09/06/26-1";
+// Sweep 09/06/26: LinkedIn Jobs — 1 new contract job found. Posts: 1 signal (Blake Jones AI studio, check location).
 // NOTE: Sweeps never touch crew. Only jf/jc are ever modified by sweep logic.
 const LATEST_SWEEP = [
   // ── Freelance ──────────────────────────────────────────────────────────────────────────
@@ -43,6 +43,7 @@ const LATEST_SWEEP = [
   { company:"DPG Media",      role:"Community Producer Libelle Club",    type:"Contract",  location:"Amsterdam (Hybrid)", sector:"Media / Publishing", priority:"Medium", source:"https://linkedin.com/jobs", notes:"6-month contract. Libelle Club community platform. DPG Media Nederland. 3 connections work here. Not core creative production but strong Dutch media name.", date:"05/06/26" },
   { company:"DEPT®",        role:"Project Manager (Creative)",         type:"Contract",  location:"Amsterdam / Rotterdam (Hybrid)", sector:"Digital / Agency", priority:"High",   source:"https://job-boards.greenhouse.io/dept/jobs/7957564", notes:"NEW posting. Day-to-day PM on major accounts: Philips, Netflix, Uber, Miele, Grolsch. End-to-end creative projects — content, social, design, 360 campaigns. Requires Dutch fluency. Confirmed active June 2026.", date:"08/06/26" },
   { company:"Boomerang",       role:"Project Manager",                    type:"Contract",  location:"Amsterdam (Hybrid)", sector:"Agency / Production", priority:"Medium", source:"https://linkedin.com/jobs", notes:"Part of Publicis Groupe. Production-focused agency. Head of Production: Han Schuurman. Posted 2 days ago. Good entry point into Publicis network.", date:"08/06/26" },
+  { company:"Booking.com",     role:"Senior Project Manager",             type:"Contract",  location:"Amsterdam (On-site)", sector:"Tech / Travel", priority:"High",   source:"https://linkedin.com/jobs/view/4425619968", notes:"For independent contractors — explicitly a contract/freelance role. Amsterdam on-site. 1 connection there. 55 applicants 15h after posting. Booking.com is a previous client via TILT Amsterdam. Apply fast.", date:"09/06/26" },
 ];
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const mk = (x) => ({ ...x, id: uid() });
