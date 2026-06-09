@@ -1602,7 +1602,7 @@ export default function App() {
 
       {/* Header */}
       <div style={{ background:"#fff", borderBottom:`1px solid ${C.border}`, padding:"10px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:100, gap:12 }}>
-        <Logo />
+        <div onClick={() => setTab("overview")} style={{ cursor:"pointer", flexShrink:0 }} title="Go to Overview"><Logo /></div>
 
         {/* Global search */}
         <div ref={searchRef} style={{ position:"relative", flex:1, maxWidth:360 }}>
