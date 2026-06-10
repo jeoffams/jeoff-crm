@@ -23,8 +23,8 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 //    → These surface informal "network post" roles before they hit job boards
 // 3. Jellow.nl (if user logged in on Browser 1): browse https://www.jellow.nl/opdrachten for producer/producent
 // 4. Sweep NEVER modifies crew (jcr). Only writes to jf + jc.
-const SWEEP_ID = "09/06/26-2";
-// Sweep 09/06/26: Added Bugaboo Creative Operations Manager (via user tip). Keywords expanded to include creative ops roles.
+const SWEEP_ID = "09/06/26-3";
+// Sweep 09/06/26: Expanded to Benelux+UK+DE remote. Added Ethos Senior Producer (UK Remote $100/hr). Geography now: AMS + NL/BE/UK/DE remote.
 // NOTE: Sweeps never touch crew. Only jf/jc are ever modified by sweep logic.
 const LATEST_SWEEP = [
   // ── Freelance ──────────────────────────────────────────────────────────────────────────
