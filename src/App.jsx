@@ -461,7 +461,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
         {[
           { label:"Warm Leads", val:warm.length, sub:`${warm.filter((w) => w.stage==="Conversation").length} in conversation` },
           { label:"New Leads", val:newL.length, sub:`${newL.filter((n) => n.stage==="Contacted").length} contacted` },
-          { label:"Agencies", val:ag.length, sub:`${ag.filter((a) => a.status==="In Warm Leads").length} in pipeline` },
+          { label:"Agencies & Studios", val:ag.length, sub:`${ag.filter((a) => a.status==="In Warm Leads").length} in pipeline` },
           { label:"Brands", val:br.length, sub:`${br.filter((b) => b.warmIn==="Yes").length} warm contacts` },
           { label:"Applied Jobs", val:appliedJobs.length, sub:`${appliedJobs.filter((j) => j.status==="Conversation"||j.status==="Offer").length} active` },
           stale.length > 0 ? { label:"Stale Leads", val:stale.length, sub:"overdue >7 days", alert:true } : null,
@@ -1609,7 +1609,7 @@ export default function App() {
     { id:"overview",  label:"Overview" },
     { id:"warm",      label:"Warm Leads ("+warm.length+")" },
     { id:"leads",     label:"Leads ("+newL.length+")" },
-    { id:"agencies",  label:"Agencies ("+ag.length+")" },
+    { id:"agencies",  label:"Agencies & Studios ("+ag.length+")" },
     { id:"brands",    label:"Brands ("+br.length+")" },
     { id:"crew",      label:"Rolodex ("+crew.length+")" },
     { id:"freelance", label:"Freelance Jobs", badge:flNew },
