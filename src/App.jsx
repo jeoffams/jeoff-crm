@@ -16,15 +16,15 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 // ── Sweep ─────────────────────────────────────────────────────────────────────
 // SWEEP INSTRUCTIONS (for Claude when "Run Sweep" is typed in chat):
 // 1. LinkedIn JOBS: https://linkedin.com/jobs/search/?keywords=[term]&location=Amsterdam%2C+North+Holland%2C+Netherlands&geoId=102011674&f_TPR=r604800&sortBy=DD
-//    Terms to search: "creative producer", "executive producer", "content producer", "producent", "VFX producer", "project manager productie"
+//    Terms to search: "creative producer", "executive producer", "content producer", "producent", "VFX producer", "project manager productie", "creative operations manager", "creative ops", "creative operations", "creative services manager"
 // 2. LinkedIn POSTS: https://linkedin.com/search/results/content/?keywords=[term]&datePosted=past-week
 //    Terms: "looking for producer amsterdam", "zoeken producent amsterdam", "freelance CP gezocht", "need a producer",
 //           "wij zoeken producent", "zoeken project manager", "freelance project manager gezocht", "wij zoeken een sr"
 //    → These surface informal "network post" roles before they hit job boards
 // 3. Jellow.nl (if user logged in on Browser 1): browse https://www.jellow.nl/opdrachten for producer/producent
 // 4. Sweep NEVER modifies crew (jcr). Only writes to jf + jc.
-const SWEEP_ID = "09/06/26-1";
-// Sweep 09/06/26: LinkedIn Jobs — 1 new contract job found. Posts: 1 signal (Blake Jones AI studio, check location).
+const SWEEP_ID = "09/06/26-2";
+// Sweep 09/06/26: Added Bugaboo Creative Operations Manager (via user tip). Keywords expanded to include creative ops roles.
 // NOTE: Sweeps never touch crew. Only jf/jc are ever modified by sweep logic.
 const LATEST_SWEEP = [
   // ── Freelance ──────────────────────────────────────────────────────────────────────────
@@ -44,6 +44,7 @@ const LATEST_SWEEP = [
   { company:"DEPT®",        role:"Project Manager (Creative)",         type:"Contract",  location:"Amsterdam / Rotterdam (Hybrid)", sector:"Digital / Agency", priority:"High",   source:"https://job-boards.greenhouse.io/dept/jobs/7957564", notes:"NEW posting. Day-to-day PM on major accounts: Philips, Netflix, Uber, Miele, Grolsch. End-to-end creative projects — content, social, design, 360 campaigns. Requires Dutch fluency. Confirmed active June 2026.", date:"08/06/26" },
   { company:"Boomerang",       role:"Project Manager",                    type:"Contract",  location:"Amsterdam (Hybrid)", sector:"Agency / Production", priority:"Medium", source:"https://linkedin.com/jobs", notes:"Part of Publicis Groupe. Production-focused agency. Head of Production: Han Schuurman. Posted 2 days ago. Good entry point into Publicis network.", date:"08/06/26" },
   { company:"Booking.com",     role:"Senior Project Manager",             type:"Contract",  location:"Amsterdam (On-site)", sector:"Tech / Travel", priority:"High",   source:"https://linkedin.com/jobs/view/4425619968", notes:"For independent contractors — explicitly a contract/freelance role. Amsterdam on-site. 1 connection there. 55 applicants 15h after posting. Booking.com is a previous client via TILT Amsterdam. Apply fast.", date:"09/06/26" },
+  { company:"Bugaboo",         role:"Creative Operations Manager",        type:"Contract",  location:"Amsterdam (Hybrid)", sector:"Consumer / Design / Brand", priority:"High",   source:"https://www.linkedin.com/jobs/view/4422282918/", notes:"In-house creative studio ops role at premium Dutch stroller brand. Reports to Colinda Bijsterveld (Global Head of Creative, 2nd degree). 100+ applicants — move fast. Own workflows, resourcing, multi-channel campaigns.", date:"09/06/26" },
 ];
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const mk = (x) => ({ ...x, id: uid() });
