@@ -408,6 +408,14 @@ const GlobalSearch = ({ q, warm, newL, ag, br, crew, fl, ct, onGo }) => {
 const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChange, onGoToWarm }) => {
   const upcoming = warm.filter((w) => { const d = daysUntil(w.nextActionDate); return d >= -3 && d <= 14; }).sort((a,b) => daysUntil(a.nextActionDate)-daysUntil(b.nextActionDate));
   const stale = warm.filter((w) => daysUntil(w.nextActionDate) < -7 && w.stage !== "Won" && w.stage !== "Paused");
+  const staleAgencies = (ag||[]).filter(a => {
+    if (a.status!=='Contact found' || !a.contact || a.contact==='TBD') return false;
+    const an = (a.name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    return !warm.some(w => {
+      const wc = (w.company||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+      return an.length>3 && (wc.includes(an.substring(0,6)) || an.includes(wc.substring(0,6)));
+    });
+  }).slice(0,6);
   const pipeData = ["Radar","Nurturing","Conversation","Proposal","Won"].map((s) => ({ name:s, v:warm.filter((w) => w.stage===s).length }));
   const allJobs = [...fl, ...ct];
   const appliedJobs = allJobs.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
@@ -496,6 +504,21 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {staleAgencies.length>0 && (
+        <div style={{ background:"#fffbf0", border:"1px solid #f59e0b66", borderRadius:8, padding:"12px 16px", marginBottom:16 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"#92400e", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>Agencies with contacts — no outreach yet</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+            {staleAgencies.map(a=>(
+              <div key={a.id} style={{ background:"#fff", border:"1px solid #f59e0b44", borderRadius:6, padding:"6px 10px", minWidth:150 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:C.text }}>{a.name}</div>
+                <div style={{ fontSize:10, color:C.muted, marginTop:1 }}>{(a.contact||'').split(' (')[0]}</div>
+                <div style={{ fontSize:10, color:"#b45309", marginTop:2, fontWeight:600 }}>No warm lead started</div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -696,7 +719,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
 };
 
 // ── Warm Leads Tab ─────────────────────────────────────────────────────────────
-const WARM_STAGES = ["Conversation","Nurturing","Radar","Proposal","Won","Paused"];
+const WARM_STAGES = ["Radar","Reached Out","Replied","Had Call","Brief Pending","Proposal","Won","Paused"];
 const TIER_OPTS = ["A – Agency","A – Studio","B – Brand","B – Agency","C – Studio","C – Agency","Other"];
 
 const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive }) => {
@@ -772,7 +795,7 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
           <div style={{ overflowX:"auto" }}>
             <table style={{ width:"100%", borderCollapse:"collapse", minWidth:1000 }}>
               <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
-                {["NAME","ROLE","COMPANY","EMAIL","TIER","STAGE","LAST CONTACT","NEXT ACTION / DATE","NOTES",""].map((h,i) => <th key={i} style={TH_STYLE}>{h}</th>)}
+                {["NAME","ROLE","COMPANY","EMAIL","LI","TIER","STAGE","LAST CONTACT","NEXT ACTION / DATE","NOTES",""].map((h,i) => <th key={i} style={TH_STYLE}>{h}</th>)}
               </tr></thead>
               <tbody>
                 {grp.map((l) => {
@@ -792,6 +815,10 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
                       </td>
                       <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top" }}>
                         <EditCell value={l.email} onSave={(v) => onUpdate(l.id,"email",v)} />
+                      </td>
+                      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:70 }}>
+                        <EditCell value={l.linkedin||""} onSave={(v)=>onUpdate(l.id,"linkedin",v)} />
+                        {l.linkedin && <a href={l.linkedin} target="_blank" rel="noreferrer" style={{ display:"block",fontSize:10,color:R,marginTop:2,textDecoration:"none",fontWeight:600 }}>↗ Open</a>}
                       </td>
                       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
                         <Sel value={l.tier||"A – Agency"} opts={TIER_OPTS} onChange={(v) => onUpdate(l.id,"tier",v)} />
@@ -900,6 +927,10 @@ const LeadsTab = ({ leads, onUpdate, onAdd, onPromote, onDelete }) => {
       <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:100 }}><EditCell value={l.role} onSave={(v) => onUpdate(l.id,"role",v)} /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:120 }}><EditCell value={l.company} onSave={(v) => onUpdate(l.id,"company",v)} /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}><Sel value={l.contact||"LinkedIn"} opts={VIA_OPTS} onChange={(v) => onUpdate(l.id,"contact",v)} /></td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:70 }}>
+        <EditCell value={l.linkedin||""} onSave={(v)=>onUpdate(l.id,"linkedin",v)} />
+        {l.linkedin && <a href={l.linkedin} target="_blank" rel="noreferrer" style={{ display:"block",fontSize:10,color:R,marginTop:2,textDecoration:"none",fontWeight:600 }}>↗ Open</a>}
+      </td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}><Sel value={l.tier||"A – Agency"} opts={TIER_OPTS} onChange={(v) => onUpdate(l.id,"tier",v)} /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
         <Sel value={l.stage||"New"} opts={LEAD_STAGES} onChange={(v) => onUpdate(l.id,"stage",v)} />
@@ -934,7 +965,7 @@ const LeadsTab = ({ leads, onUpdate, onAdd, onPromote, onDelete }) => {
 
   const THead = () => (
     <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
-      {["NAME","ROLE","COMPANY","VIA","TIER","STAGE","ADDED","NOTES / HISTORY",""].map((h,i) => <th key={i} style={TH_STYLE}>{h}</th>)}
+      {["NAME","ROLE","COMPANY","VIA","LI","TIER","STAGE","ADDED","NOTES / HISTORY",""].map((h,i) => <th key={i} style={TH_STYLE}>{h}</th>)}
     </tr></thead>
   );
 
@@ -1001,7 +1032,7 @@ const AgTab = ({ data, onUpdate, onAdd, onDelete, warm, leads }) => {
     <div style={{ overflowX:"auto" }}>
       <table style={{ width:"100%", borderCollapse:"collapse", minWidth:820 }}>
         <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
-          {["AGENCY","CONTACT","EMAIL","WEBSITE","LOCATION","PRIORITY","STATUS","NOTES","LEAD WITH",""].map((h,i) => <th key={i} style={TH_STYLE}>{h}</th>)}
+          {["AGENCY","CONTACT","EMAIL","LI","WEBSITE","LOCATION","PRIORITY","STATUS","NOTES","LEAD WITH",""].map((h,i) => <th key={i} style={TH_STYLE}>{h}</th>)}
         </tr></thead>
         <tbody>
           {data.map((a) => (
@@ -1010,6 +1041,10 @@ const AgTab = ({ data, onUpdate, onAdd, onDelete, warm, leads }) => {
               <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={a.contact} onSave={(v) => onUpdate(a.id,"contact",v)} /></td>
               <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top" }}>
                 {a.email ? <a href={"mailto:"+a.email} style={{ color:R, textDecoration:"none" }}>{a.email}</a> : <EditCell value={a.email} onSave={(v) => onUpdate(a.id,"email",v)} />}
+              </td>
+              <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:80 }}>
+                <EditCell value={a.linkedin||""} onSave={(v)=>onUpdate(a.id,"linkedin",v)} />
+                {a.linkedin && <a href={a.linkedin} target="_blank" rel="noreferrer" style={{ display:"block",fontSize:10,color:R,marginTop:2,textDecoration:"none",fontWeight:600 }}>↗ Open</a>}
               </td>
               <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top" }}>
                 {a.website ? <a href={a.website} target="_blank" rel="noreferrer" style={{ color:R, textDecoration:"none" }}>{a.website.replace("https://","")}</a> : <EditCell value={a.website} onSave={(v) => onUpdate(a.id,"website",v)} />}
