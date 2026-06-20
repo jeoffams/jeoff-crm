@@ -523,7 +523,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
         </div>
       )}
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16, marginBottom:16 }}>
+      <div className="stat-grid-3" style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16, marginBottom:16 }}>
         <div style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, padding:16 }}>
           <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:12 }}>Next Actions — 14 days</div>
           {upcoming.length === 0 && <div style={{ fontSize:12, color:C.muted }}>No upcoming actions.</div>}
@@ -1283,7 +1283,7 @@ const LoginScreen = () => {
   return (
     <div style={{ position:"fixed", inset:0, background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Open Sans',Arial,sans-serif" }}>
       <Logo />
-      <div style={{ marginTop:40, width:320 }}>
+      <div style={{ marginTop:40, width:"min(320px, 90vw)" }}>
         <div style={{ textAlign:"center", marginBottom:28 }}><div style={{ fontSize:14, fontWeight:700, fontFamily:"'Lora',serif", color:C.muted }}>Sign in to your CRM</div></div>
         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
           <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={onKey} autoFocus style={{ border:`1px solid ${C.border}`, borderRadius:7, padding:"11px 14px", fontSize:13, fontWeight:600, outline:"none", fontFamily:"inherit", width:"100%", boxSizing:"border-box" }} />
@@ -1310,7 +1310,7 @@ const LoginScreen = () => {
 const LoadingScreen = ({ status }) => (
   <div style={{ position:"fixed", inset:0, background:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", zIndex:9999 }}>
     <Logo />
-    <div style={{ marginTop:32, width:300, textAlign:"center" }}>
+    <div style={{ marginTop:32, width:"min(300px, 85vw)", textAlign:"center" }}>
       <div style={{ height:2, background:"#f0f0f0", borderRadius:2, overflow:"hidden", marginBottom:14 }}>
         <div style={{ height:"100%", background:R, borderRadius:2, animation:"loadbar 1.8s ease-in-out infinite", transformOrigin:"left" }} />
       </div>
@@ -1669,14 +1669,24 @@ export default function App() {
         button:hover { opacity:.85; }
         a:hover { opacity:.8; }
         input, select, textarea { font-family:inherit; }
+
+        @media (max-width: 640px) {
+          .app-header { flex-wrap: wrap !important; row-gap: 8px !important; padding: 10px 14px !important; }
+          .app-header .global-search-wrap { order: 3 !important; flex-basis: 100% !important; max-width: 100% !important; }
+          .app-header .header-actions { gap: 8px !important; }
+          .sweep-info-text { display: none !important; }
+          .stat-grid-3 { grid-template-columns: 1fr !important; }
+          .content-wrap { padding-left: 10px !important; padding-right: 10px !important; }
+          .tab-bar-row { padding-left: 10px !important; padding-right: 10px !important; }
+        }
       `}</style>
 
       {/* Header */}
-      <div style={{ background:"#fff", borderBottom:`1px solid ${C.border}`, padding:"10px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:100, gap:12 }}>
+      <div className="app-header" style={{ background:"#fff", borderBottom:`1px solid ${C.border}`, padding:"10px 20px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:100, gap:12 }}>
         <div onClick={() => setTab("overview")} style={{ cursor:"pointer", flexShrink:0 }} title="Go to Overview"><Logo /></div>
 
         {/* Global search */}
-        <div ref={searchRef} style={{ position:"relative", flex:1, maxWidth:360 }}>
+        <div ref={searchRef} className="global-search-wrap" style={{ position:"relative", flex:1, maxWidth:360 }}>
           <input
             type="text"
             placeholder="Search everything..."
@@ -1690,7 +1700,7 @@ export default function App() {
           )}
         </div>
 
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+        <div className="header-actions" style={{ display:"flex", alignItems:"center", gap:12 }}>
           {msg && (
             <div style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
               {msg}<button onClick={() => setMsg(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"#16a34a", fontSize:14, lineHeight:1, padding:0 }}>x</button>
@@ -1702,7 +1712,7 @@ export default function App() {
           <button onClick={exportData} style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", cursor:"pointer", fontSize:11, fontWeight:600 }}>Export</button>
 
           
-          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
+          <div className="sweep-info-text" style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
             <div style={{ fontSize:10, color:C.muted }}>Last sweep: <span style={{ color:C.text, fontWeight:600 }}>{SWEEP_ID.split("-")[0]}</span></div>
             <div style={{ color:C.muted, fontSize:9, textTransform:"uppercase", letterSpacing:"0.7px" }}>Type "Run Sweep" in chat to update</div>
           </div>
@@ -1710,7 +1720,7 @@ export default function App() {
       </div>
 
       {/* Tab bar */}
-      <div style={{ background:"#fff", borderBottom:`1px solid ${C.border}`, padding:"0 20px", display:"flex", overflowX:"auto", gap:2 }}>
+      <div className="tab-bar-row" style={{ background:"#fff", borderBottom:`1px solid ${C.border}`, padding:"0 20px", display:"flex", overflowX:"auto", gap:2 }}>
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ background:"none", border:"none", borderBottom:tab===t.id?`2px solid ${R}`:"2px solid transparent", color:tab===t.id?R:C.muted, padding:"8px 12px", cursor:"pointer", fontSize:12, fontWeight:tab===t.id?700:500, fontFamily:tab===t.id?"'Lora',serif":"inherit", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:4, marginBottom:-1 }}>
@@ -1721,7 +1731,7 @@ export default function App() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth:1600, margin:"0 auto", paddingTop:20 }}>
+      <div className="content-wrap" style={{ maxWidth:1600, margin:"0 auto", paddingTop:20 }}>
         {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} pencils={pencils} onPencilChange={(p)=>{ setPencils(p); db.set("jpen",p); }} onGoToWarm={()=>setTab("warm")} />}
         {tab==="warm"      && <WarmTab leads={warm} onUpdate={upd("jw",setWarm)} onStageChange={warmStageChange} onAdd={add(setWarm,"jw",{name:"",role:"",company:"",email:"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"",notes:""})} onDelete={del("jw",setWarm)} onArchive={archiveToLeads} />}
         {tab==="leads"     && <LeadsTab leads={newL} onUpdate={upd("jn",setNewL)} onAdd={add(setNewL,"jn",{name:"",role:"",company:"",contact:"LinkedIn",tier:"A – Agency",stage:"New",dateAdded:nowStr(),notes:""})} onPromote={promoteToWarm} onDelete={del("jn",setNewL)} />}
