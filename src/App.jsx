@@ -465,7 +465,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
   });
   return (
     <div style={{ padding:"16px 20px" }}>
-      <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:20 }}>
+      <div className="stat-card-row" style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:20 }}>
         {[
           { label:"Warm Leads", val:warm.length, sub:`${warm.filter((w) => w.stage==="Conversation").length} in conversation` },
           { label:"New Leads", val:newL.length, sub:`${newL.filter((n) => n.stage==="Contacted").length} contacted` },
@@ -475,7 +475,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           stale.length > 0 ? { label:"Stale Leads", val:stale.length, sub:"overdue >7 days", alert:true } : null,
           newJobs > 0 ? { label:"New Jobs", val:newJobs, sub:"from last sweep" } : null,
         ].filter(Boolean).map((s, i) => (
-          <div key={i} style={{ background: s.alert ? "#fff5f5" : "#fff", border:`1px solid ${s.alert ? R+"44" : C.border}`, borderRadius:8, padding:"14px 18px", minWidth:110 }}>
+          <div key={i} className="stat-card" style={{ background: s.alert ? "#fff5f5" : "#fff", border:`1px solid ${s.alert ? R+"44" : C.border}`, borderRadius:8, padding:"14px 18px", minWidth:110 }}>
             <div style={{ fontSize:26, fontWeight:700, fontFamily:"'Lora',serif", color: s.alert ? R : R }}>{s.val}</div>
             <div style={{ fontSize:11, fontWeight:600, color: s.alert ? R : C.text, marginTop:2 }}>{s.label}</div>
             <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{s.sub}</div>
@@ -513,7 +513,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           <div style={{ fontSize:11, fontWeight:700, color:"#92400e", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>Agencies with contacts — no outreach yet</div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
             {staleAgencies.map(a=>(
-              <div key={a.id} style={{ background:"#fff", border:"1px solid #f59e0b44", borderRadius:6, padding:"6px 10px", minWidth:150 }}>
+              <div key={a.id} className="stale-card" style={{ background:"#fff", border:"1px solid #f59e0b44", borderRadius:6, padding:"6px 10px", minWidth:150 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:C.text }}>{a.name}</div>
                 <div style={{ fontSize:10, color:C.muted, marginTop:1 }}>{(a.contact||'').split(' (')[0]}</div>
                 <div style={{ fontSize:10, color:"#b45309", marginTop:2, fontWeight:600 }}>No warm lead started</div>
@@ -1678,6 +1678,8 @@ export default function App() {
           .stat-grid-3 { grid-template-columns: 1fr !important; }
           .content-wrap { padding-left: 10px !important; padding-right: 10px !important; }
           .tab-bar-row { padding-left: 10px !important; padding-right: 10px !important; }
+          .stat-card { flex: 1 1 calc(50% - 6px) !important; min-width: 0 !important; }
+          .stale-card { flex: 1 1 calc(50% - 6px) !important; min-width: 0 !important; }
         }
       `}</style>
 
