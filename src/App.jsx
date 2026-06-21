@@ -807,7 +807,7 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
                   const rowBg = contactHeat(l.lastContact);
                   return (
                     <tr key={l.id} style={{ borderBottom:`1px solid ${C.border}`, background:rowBg }}>
-                      <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:110 }}>
+                      <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:110, backgroundColor:rowBg }}>
                         <EditCell value={l.name} onSave={(v) => onUpdate(l.id,"name",v)} />
                       </td>
                       <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:110 }}>
@@ -926,7 +926,7 @@ const LeadsTab = ({ leads, onUpdate, onAdd, onPromote, onDelete }) => {
 
   const Row = ({ l }) => (
     <tr style={{ borderBottom:`1px solid ${C.border}`, background: l.movedFromWarm ? "#fafafa" : "#fff" }}>
-      <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:100 }}><EditCell value={l.name} onSave={(v) => onUpdate(l.id,"name",v)} /></td>
+      <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:100, backgroundColor: l.movedFromWarm ? "#fafafa" : "#fff" }}><EditCell value={l.name} onSave={(v) => onUpdate(l.id,"name",v)} /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:100 }}><EditCell value={l.role} onSave={(v) => onUpdate(l.id,"role",v)} /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:120 }}><EditCell value={l.company} onSave={(v) => onUpdate(l.id,"company",v)} /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}><Sel value={l.contact||"LinkedIn"} opts={VIA_OPTS} onChange={(v) => onUpdate(l.id,"contact",v)} /></td>
@@ -1041,7 +1041,7 @@ const AgTab = ({ data, onUpdate, onAdd, onDelete, warm, leads }) => {
         <tbody>
           {data.map((a) => (
             <tr key={a.id} style={{ borderBottom:`1px solid ${C.border}` }}>
-              <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:140 }}><EditCell value={a.name} onSave={(v) => onUpdate(a.id,"name",v)} /></td>
+              <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:140, backgroundColor:"#fff" }}><EditCell value={a.name} onSave={(v) => onUpdate(a.id,"name",v)} /></td>
               <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={a.contact} onSave={(v) => onUpdate(a.id,"contact",v)} /></td>
               <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top" }}>
                 {a.email ? <a href={"mailto:"+a.email} style={{ color:R, textDecoration:"none" }}>{a.email}</a> : <EditCell value={a.email} onSave={(v) => onUpdate(a.id,"email",v)} />}
@@ -1160,7 +1160,7 @@ const CrewTab = ({ data, onUpdate, onAdd, onDelete }) => {
               const sc = SPEC_COLORS[c.specialty] || { bg:"#f3f4f6", col:"#374151" };
               return (
                 <tr key={c.id} style={{ borderBottom:`1px solid ${C.border}` }}>
-                  <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:120 }}><EditCell value={c.name} onSave={(v) => onUpdate(c.id,"name",v)} /></td>
+                  <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:120, backgroundColor:"#fff" }}><EditCell value={c.name} onSave={(v) => onUpdate(c.id,"name",v)} /></td>
                   <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
                     <Sel value={c.specialty||"Motion Design"} opts={ALL_SPECS} onChange={(v) => onUpdate(c.id,"specialty",v)} />
                     <span style={{ background:sc.bg, color:sc.col, borderRadius:4, padding:"1px 5px", fontSize:9, fontWeight:600, display:"inline-block", marginTop:3 }}>{c.specialty}</span>
@@ -1203,7 +1203,7 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onDelet
   );
   const JobRow = ({ j }) => (
     <tr style={{ borderBottom:`1px solid ${C.border}`, background: j.isNew ? "#fff9f8" : "#fff" }}>
-      <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top" }}>
+      <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", backgroundColor: j.isNew ? "#fff9f8" : "#fff" }}>
         <div style={{ display:"flex", alignItems:"center", gap:5 }}>
           {j.isNew && <span style={{ background:R, color:"#fff", borderRadius:4, padding:"1px 4px", fontSize:9, fontWeight:700 }}>NEW</span>}
           <EditCell value={j.company||""} onSave={(v) => onUpdate(j.id,"company",v)} />
@@ -1687,9 +1687,9 @@ export default function App() {
           .stat-card { flex: 1 1 calc(50% - 6px) !important; min-width: 0 !important; }
           .stale-card { flex: 1 1 calc(50% - 6px) !important; min-width: 0 !important; }
           .mobile-scroll-hint { display:block !important; font-size:10px; color:#909090; margin-bottom:4px; }
-          .sticky-col-th, .sticky-col-td { position:sticky !important; left:0 !important; box-shadow:2px 0 4px -2px rgba(0,0,0,0.15) !important; }
-          .sticky-col-th { background:#fff !important; z-index:3 !important; }
-          .sticky-col-td { background:inherit !important; z-index:1 !important; }
+          .sticky-col-th, .sticky-col-td { position:sticky !important; left:0 !important; box-shadow:2px 0 4px -2px rgba(0,0,0,0.15) !important; background-clip:padding-box !important; }
+          .sticky-col-th { background-color:#fff !important; z-index:3 !important; }
+          .sticky-col-td { z-index:1 !important; }
         }
       `}</style>
 
