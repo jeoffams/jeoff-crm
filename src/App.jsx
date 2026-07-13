@@ -18,46 +18,54 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 // ─── 1. LINKEDIN JOBS — Amsterdam (all types, past week) ────────────────────────
 //    URL: https://linkedin.com/jobs/search/?keywords=[term]&geoId=102011674&f_TPR=r604800&sortBy=DD
 //    Batch A — Production: "creative producer", "executive producer", "content producer", "producent",
-//             "VFX producer", "senior producer", "freelance producer"
+//             "VFX producer", "senior producer", "freelance producer", "AI producer", "AI creative producer"
 //    Batch B — Creative Ops: "creative operations manager", "creative ops", "creative operations",
 //             "creative services manager", "creative project manager", "head of creative operations"
 //    Batch C — PM/Production: "project manager productie", "production manager", "campaign manager",
-//             "head of production", "creative project manager"
+//             "head of production", "creative project manager", "generative AI producer"
 // ─── 2. LINKEDIN JOBS — Remote (Benelux + UK + DE, contract/freelance only) ──────
 //    Add: &f_WT=2 (remote) + &f_JT=C%2CF (contract/freelance)
 //    NL: geoId=102890719 | BE: geoId=100565514 | UK: geoId=101165590 | DE: geoId=101282230
-//    Same keywords as Batch A+B above. Focus on senior/lead titles that travel.
-// ─── 3. LINKEDIN POSTS — Informal briefs ────────────────────────────────────────
+//    ALL FOUR must be run every sweep. Same keywords as Batch A+B above.
+// ─── 3. LINKEDIN POSTS — Informal freelance briefs ──────────────────────────────
 //    URL: https://linkedin.com/search/results/content/?keywords=[term]&datePosted=past-week&sortBy=date_posted
-//    Dutch: "wij zoeken producent", "zoeken project manager", "freelance producer gezocht",
-//           "freelance CP gezocht", "wij zoeken een sr", "zoeken producent amsterdam"
-//    English: "looking for a producer", "freelance producer needed", "need a creative producer",
-//             "hiring producer", "freelance PM needed", "AI campaign producer"
-//    → Catches informal briefs before they hit job boards
-// ─── 4. THE DOTS — https://the-dots.com/jobs ──────────────────────────────────────
-//    Search: "producer" + "project manager" | Filter: Freelance | Location: Netherlands + UK + Remote
-//    → Best UK creative freelance platform, better signal/noise than LinkedIn for senior producers
-// ─── 5. YUNOJUNO — https://yunojuno.com/jobs ─────────────────────────────────────
-//    Search: "producer" + "creative production" | Filter: Amsterdam + London + Remote
-//    → Agency-side briefs, very relevant profile match
-// ─── 6. GREENHOUSE BOARDS — Key brands/agencies ──────────────────────────────────
+//    Run 3 separate post searches:
+//    Search 1 — Dutch informal: "wij zoeken producent" OR "freelance producer gezocht" OR "freelance CP gezocht"
+//    Search 2 — English informal: "anyone know a good producer" OR "looking for a producer" OR "freelance producer needed"
+//    Search 3 — Opportunity signals: "available in" amsterdam producer OR "anyone available" producer amsterdam
+//    → Key insight: informal briefs use natural language. Search broadly, not just exact job titles.
+//    → Also check recent posts by known contacts: production heads at CZAR, Hazazah, Boomerang, W+K
+// ─── 4. JELLOW.NL — Dutch freelance platform ─────────────────────────────────────
+//    URL: https://www.jellow.nl/opdrachten
+//    Search: "producent" / "producer" / "projectmanager" | Filter: Creative / Marketing
+//    → Dutch-specific freelance brief platform. Brands + agencies post directly. High relevance.
+// ─── 5. THE DOTS — https://the-dots.com/jobs ──────────────────────────────────────
+//    URL: https://the-dots.com/jobs?q=producer&type=freelance
+//    IMPORTANT: page is heavy JS — use get_page_text tool (not innerText) OR wait 6+ seconds after load
+//    before reading. Check for job card elements with document.querySelector('.job-card') first.
+//    → Best UK creative freelance platform for senior producers
+// ─── 6. YUNOJUNO — https://yunojuno.com ─────────────────────────────────────────
+//    Navigate standalone (not in browser_batch) to avoid permission errors.
+//    Search: "producer" + "creative production" | Amsterdam + London + Remote
+// ─── 7. GREENHOUSE BOARDS — Key brands/agencies ──────────────────────────────────
 //    DEPT:         https://job-boards.greenhouse.io/dept
-//    Adidas (ext): via LinkedIn or adidas careers site
-//    Nike EMEA:    https://jobs.nike.com (filter: Netherlands, Production)
-//    Booking.com:  https://jobs.booking.com (filter: Content/Creative)
+//    Booking.com:  https://jobs.booking.com (filter: Content/Creative/Production)
 //    → These post to ATS before or instead of LinkedIn
-// ─── 7. STUDIO/AGENCY SITES — Direct project briefs ─────────────────────────────
-//    Check: CZAR (czar.nl), Hazazah (hazazah.com), Ambassadors (ambassadors.tv),
-//            Monks (monks.com/careers), Wenneker (wenneker.com), NJA (nja.nl)
+// ─── 8. STUDIO/AGENCY SITES — Direct project briefs ─────────────────────────────
+//    Check: CZAR (czar.nl), Hazazah (hazazah.com), Monks (monks.com/careers), Wenneker (wenneker.com)
+//    NOTE: ambassadors.nl domain is for sale — skip until new URL confirmed
 //    → Studios post project needs on their own sites before anywhere else
-// ─── 8. WARM LEADS FOLLOW-UP CHECK ─────────────────────────────────────────────
-//    After sweep: flag any warm lead in jw with lastContact > 14 days ago (no action taken)
+// ─── 9. WARM LEADS FOLLOW-UP CHECK ─────────────────────────────────────────────
+//    After sweep: flag any warm lead in jw with lastContact > 14 days ago (stage not Won/Paused)
 //    Include in sweep report as "Overdue follow-ups" section
-// ─── 9. RULES ───────────────────────────────────────────────────────────────────
+// ─── 10. RULES ──────────────────────────────────────────────────────────────────
 //    • Write ALL new jobs directly to Supabase (jf=freelance, jc=contract) — never just seed
 //    • NEVER write to jcr (crew/rolodex). Never modify existing entries.
 //    • Dedup by company name before writing. Skip if company already in jf or jc this month.
-//    • Include sweep date + source URL on every entry.
+//    • Include sweep date + source URL on every entry. Set isNew:true on all new entries.
+//    • Skip: pure digital/media buying, DTC performance marketing, live events touring,
+//             junior/intern roles, gaming unless production-focused, HR tech marketing.
+//    • Flag "Actively reviewing applicants" roles — note it in the entry for prioritisation.
 const SWEEP_ID = "10/06/26-1";
 // Sweep 10/06/26: Full improved sweep — expanded keywords + remote geo + TheDots + YunoJuno + Greenhouse + Studio sites + warm lead check.
 // NOTE: Sweeps never touch crew. Only jf/jc are ever modified by sweep logic.
