@@ -1203,7 +1203,8 @@ const CrewTab = ({ data, onUpdate, onAdd, onDelete }) => {
 const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose, onDelete }) => {
   const active  = data.filter((j) => ["New","Researching"].includes(j.status||"New"));
   const applied = data.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
-  const passed  = data.filter((j) => j.status === "Passed" || j.status === "Closed");
+  const passed  = data.filter((j) => j.status === "Passed");
+  const closed  = data.filter((j) => j.status === "Closed");
   const THead = () => (
     <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
       {["COMPANY","ROLE","LOCATION","SECTOR","PRIORITY","STATUS","NOTES","SOURCE","SWEPT","APPLIED",""].map((h,i) => <th key={i} className={i===0?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
@@ -1256,7 +1257,7 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose
     <div style={{ padding:"16px 20px" }}>
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
         <AddBtn label={"Add "+type+" Job"} onClick={onAdd} />
-        <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{data.length} total — {active.length} active — {passed.length} passed</span>
+        <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{data.length} total — {active.length} active — {passed.length + closed.length} archived</span>
       </div>
       <div style={{ marginBottom:20 }}>
         <SecHd label="Active — New and Researching" count={active.length} color={R} />
@@ -1274,6 +1275,12 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose
         <div>
           <SecHd label="Passed — Decided Not to Apply" count={passed.length} color={C.muted} />
           <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.65 }}><THead /><tbody>{passed.map((j) => <JobRow key={j.id} j={j} />)}</tbody></table></div>
+        </div>
+      )}
+      {closed.length > 0 && (
+        <div>
+          <SecHd label="Closed — Heard Back" count={closed.length} color="#7c3aed" />
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.65 }}><THead /><tbody>{closed.map((j) => <JobRow key={j.id} j={j} />)}</tbody></table></div>
         </div>
       )}
     </div>
