@@ -348,7 +348,7 @@ const DeleteBtn = ({ onDelete }) => {
   );
 };
 const jobCol = (s) => { if (s==="Active"||s==="Conversation"||s==="Offer") return "#059669"; if (s==="Applied") return "#2563eb"; if (s==="No Response"||s==="Stale") return "#d97706"; if (s==="Passed"||s==="Rejected") return C.muted; return C.text; };
-const appCol = (s) => { if (s==="Active"||s==="Had a call") return "#059669"; if (s==="Applied") return "#2563eb"; if (s==="No Response"||s==="Stale") return "#d97706"; if (s==="Offer") return "#16a34a"; if (s==="Passed") return C.muted; return C.text; };
+const appCol = (s) => { if (s==="Active"||s==="Had a call") return "#059669"; if (s==="Applied") return "#2563eb"; if (s==="No Response"||s==="Stale") return "#d97706"; if (s==="Offer") return "#16a34a"; if (s==="Passed") return C.muted; if (s==="Closed") return "#7c3aed"; return C.text; };
 const TH_STYLE = { textAlign:"left", padding:"5px 10px", fontSize:10, color:C.muted, fontWeight:600, whiteSpace:"nowrap" };
 
 const SPEC_COLORS = {
@@ -1200,10 +1200,10 @@ const CrewTab = ({ data, onUpdate, onAdd, onDelete }) => {
 };
 
 // ── Jobs Tab ──────────────────────────────────────────────────────────────────
-const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onDelete }) => {
+const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose, onDelete }) => {
   const active  = data.filter((j) => ["New","Researching"].includes(j.status||"New"));
   const applied = data.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
-  const passed  = data.filter((j) => j.status === "Passed");
+  const passed  = data.filter((j) => j.status === "Passed" || j.status === "Closed");
   const THead = () => (
     <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
       {["COMPANY","ROLE","LOCATION","SECTOR","PRIORITY","STATUS","NOTES","SOURCE","SWEPT","APPLIED",""].map((h,i) => <th key={i} className={i===0?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
@@ -1224,7 +1224,7 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onDelet
         <Sel value={j.priority||"Medium"} opts={["High","Medium","Low"]} onChange={(v) => onUpdate(j.id,"priority",v)} cf={p => p==="High"?R:p==="Medium"?"#d97706":C.muted} />
       </td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-        <Sel value={j.status||"New"} opts={["New","Researching","Applied","No Response","Conversation","Offer","Rejected"]} onChange={(v) => onUpdate(j.id,"status",v)} cf={jobCol} />
+        <Sel value={j.status||"New"} opts={["New","Researching","Applied","No Response","Conversation","Offer","Rejected","Closed"]} onChange={(v) => onUpdate(j.id,"status",v)} cf={jobCol} />
       </td>
       <td style={{ padding:"8px 10px", minWidth:180, maxWidth:360, verticalAlign:"top", resize:"horizontal", overflow:"hidden" }}><EditCell value={j.notes} onSave={(v) => onUpdate(j.id,"notes",v)} multi /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
@@ -1239,10 +1239,13 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onDelet
           <button onClick={() => onUndo(j.id)} style={{ background:"#f8fafc", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>Undo</button>
         ) : j.status === "Passed" ? (
           <div style={{ display:"flex", flexDirection:"column", gap:2 }}><span style={{ fontSize:10, color:C.muted, fontStyle:"italic" }}>Passed</span><button onClick={() => onDelete&&onDelete(j.id)} style={{ background:"none", color:C.muted, border:"none", cursor:"pointer", fontSize:9, padding:0, opacity:0.5 }}>× delete</button></div>
+        ) : j.status === "Closed" ? (
+          <div style={{ display:"flex", flexDirection:"column", gap:2 }}><span style={{ fontSize:10, color:"#7c3aed", fontStyle:"italic", fontWeight:600 }}>Closed</span><button onClick={() => onDelete&&onDelete(j.id)} style={{ background:"none", color:C.muted, border:"none", cursor:"pointer", fontSize:9, padding:0, opacity:0.5 }}>× delete</button></div>
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
             <button onClick={() => onApply(j.id)} style={{ background:"#fff5f5", color:R, border:`1px solid ${R}`, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:10, fontWeight:700, whiteSpace:"nowrap" }}>Applied</button>
             <button onClick={() => onPass(j.id)} style={{ background:"#f8f8f8", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>Pass</button>
+            <button onClick={() => onClose&&onClose(j.id)} style={{ background:"#f5f3ff", color:"#7c3aed", border:"1px solid #ddd6fe", borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>Close</button>
             <button onClick={() => onDelete&&onDelete(j.id)} style={{ background:"none", color:C.muted, border:"none", cursor:"pointer", fontSize:9, padding:"2px 0", opacity:0.6 }}>× delete</button>
           </div>
         )}
@@ -1622,6 +1625,10 @@ export default function App() {
     setter((prev) => { const next = prev.map((x) => x.id===id ? {...x, status:"Passed", isNew:false} : x); db.set(key, next); return next; });
   }, []);
 
+  const closeJob = useCallback((key, setter) => (id) => {
+    setter((prev) => { const next = prev.map((x) => x.id===id ? {...x, status:"Closed", isNew:false} : x); db.set(key, next); return next; });
+  }, []);
+
   const exportData = useCallback(() => {
     const data = { exportDate:nowStr(), warmLeads:warm, leads:newL, agencies:ag, brands:br, crew, freelanceJobs:fl, contractJobs:ct };
     setExportModal(JSON.stringify(data, null, 2));
@@ -1758,8 +1765,8 @@ export default function App() {
         {tab==="agencies"  && <AgTab   data={ag}    onUpdate={updAgAndWarm}   onAdd={add(setAg,"ja",{name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""})} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
         {tab==="brands"    && <BrTab   data={br}    onUpdate={updBrAndWarm}   onAdd={add(setBr,"jb",{brand:"",contactToFind:"",sector:"",warmIn:"No",priority:"3/5",status:"Cold",notes:""})} onDelete={del("jb",setBr)} />}
         {tab==="crew"      && <CrewTab data={crew}  onUpdate={upd("jcr",setCrew)} onAdd={add(setCrew,"jcr",{name:"",specialty:"Motion Design",rate:"",email:"",website:"",location:"Amsterdam",notes:""})} onDelete={del("jcr",setCrew)} />}
-        {tab==="freelance" && <JobsTab data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} onDelete={del("jf",setFl)} />}
-        {tab==="contract"  && <JobsTab data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} onDelete={del("jc",setCt)} />}
+        {tab==="freelance" && <JobsTab data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} onClose={closeJob("jf",setFl)} onDelete={del("jf",setFl)} />}
+        {tab==="contract"  && <JobsTab data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} onClose={closeJob("jc",setCt)} onDelete={del("jc",setCt)} />}
       </div>
 
 
