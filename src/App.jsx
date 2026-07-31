@@ -66,14 +66,12 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 //    DEPT:         https://job-boards.greenhouse.io/dept
 //    Booking.com:  https://jobs.booking.com (filter: Content/Creative/Production)
 //    → These post to ATS before or instead of LinkedIn
-// ─── 8. WARM LEADS FOLLOW-UP CHECK (READ-ONLY — never write to jw during sweeps) ──────────────
-//    Read jw from Supabase, check lastContact > 14 days ago (stage not Won/Paused).
-//    Report overdue contacts in chat ONLY — never update jw data during a sweep.
-//    REASON: writing jw during a sweep overwrites any changes the user made in the app (race condition).
+// ─── 8. WARM LEADS FOLLOW-UP CHECK ─────────────────────────────────────────────
+//    After sweep: flag any warm lead in jw with lastContact > 14 days ago (stage not Won/Paused)
+//    Include in sweep report as "Overdue follow-ups" section
 // ─── 9. RULES ──────────────────────────────────────────────────────────────────
 //    • Write ALL new jobs directly to Supabase (jf=freelance, jc=contract) — never just seed
-//    • NEVER write to jw (warm leads) or jcr (crew) during a sweep — read-only only.
-//      Writing jw during a sweep causes a race condition that overwrites the user's CRM edits.
+//    • NEVER write to jcr (crew/rolodex). Never modify existing entries.
 //    • Dedup by company name before writing. Skip if company already in jf or jc this month.
 //    • Include sweep date + source URL on every entry. Set isNew:true on all new entries.
 //    • Skip: pure digital/media buying, DTC performance marketing, live events touring,
@@ -105,25 +103,12 @@ const LATEST_SWEEP = [
 // ── Seed data ─────────────────────────────────────────────────────────────────
 const mk = (x) => ({ ...x, id: uid() });
 const SW = [
-  mk({ name:"Julie Bourges", role:"Head of Production", company:"72andSunny Amsterdam", email:"julie.bourges@72andsunny.com", tier:"A – Agency", stage:"Conversation", lastContact:"29/05/26", nextActionDate:"03/06/26", nextAction:"Follow up on original outreach. What brief? Move to proposal.", notes:"HIGH PRIORITY - they reached out first." }),
-  mk({ name:"Cas de Brouwer", role:"Director of Innovation - Content", company:"Monks", email:"cas.de.brouwer@monks.com", tier:"A – Agency", stage:"Conversation", lastContact:"29/05/26", nextActionDate:"10/06/26", nextAction:"Ask what animation/CG briefs are coming up Q3.", notes:"Global studio. AI-driven content. Strong fit." }),
-  mk({ name:"Tommaso Marucchi", role:"Head of Post Production", company:"Monks", email:"tommaso.marucchi@monks.com", tier:"A – Agency", stage:"Nurturing", lastContact:"", nextActionDate:"15/06/26", nextAction:"Touch base - mention recent Monks projects.", notes:"Pair outreach with Cas for double coverage." }),
-  mk({ name:"Helen Langston", role:"Head of Production", company:"Seed Studios AI", email:"helen.langston@seedstudio.ai", tier:"A – Studio", stage:"Conversation", lastContact:"27/05/26", nextActionDate:"05/06/26", nextAction:"Clarify status. Two senior contacts = active interest.", notes:"AI-forward studio. Tech + craft fit." }),
-  mk({ name:"David Sheldrick", role:"CEO", company:"Seed Studios AI", email:"david.sheldrick@seedstudio.ai", tier:"A – Studio", stage:"Conversation", lastContact:"27/05/26", nextActionDate:"05/06/26", nextAction:"CEO-level. Follow up alongside Helen.", notes:"Both CEO and HoP = very strong signal." }),
-  mk({ name:"Maria Drossos", role:"Director of Digital Content", company:"Adidas", email:"maria.drossos@adidas.com", tier:"B – Brand", stage:"Nurturing", lastContact:"29/05/26", nextActionDate:"15/06/26", nextAction:"Re-activate Adidas relationship. Reference CG work.", notes:"TIER B. Your strongest direct brand contact." }),
-  mk({ name:"Aidan Gibbons", role:"Creative Director / Co-Founder", company:"NJA", email:"aidang@notjustany.com", tier:"A – Agency", stage:"Conversation", lastContact:"29/05/26", nextActionDate:"12/06/26", nextAction:"Ask about production needs.", notes:"Independent studio - often need external producers." }),
-  mk({ name:"Simon Sliphorst", role:"Founder, Production Lead & AI Video Director", company:"Cape Amsterdam", email:"simon@cape.amsterdam", tier:"A – Studio", stage:"Conversation", lastContact:"29/05/26", nextActionDate:"12/06/26", nextAction:"Cape has pivoted to AI video — pitch your AI production angle.", notes:"Cape pivoted to AI video production. Founder + Production Lead + AI Video Director. Strong AI angle now." }),
-  mk({ name:"Chance Woodward", role:"Managing Executive Producer, European Group", company:"Buck", email:"chance.woodward@buck.co", tier:"A – Studio", stage:"Radar", lastContact:"29/05/26", nextActionDate:"10/06/26", nextAction:"Follow up. Personalise to Buck's recent work.", notes:"Prestigious global design/animation studio." }),
-  mk({ name:"Liesbeth / Wenneker", role:"Post / VFX Studio", company:"Wenneker Amsterdam", email:"liesbeth@wenneker.amsterdam", tier:"A – Studio", stage:"Nurturing", lastContact:"06/05/26", nextActionDate:"20/06/26", nextAction:"Check what CG projects coming up.", notes:"Boutique VFX studio. Known quantity." }),
-  mk({ name:"Elizabeth Potter", role:"Owner", company:"Potter Productions", email:"", tier:"A – Studio", stage:"Nurturing", lastContact:"29/05/26", nextActionDate:"25/06/26", nextAction:"Ask about animation/post projects.", notes:"US-based. Good for international flow." }),
-  mk({ name:"Liz Dolan", role:"Freelance Producer", company:"Brothers and Sisters", email:"", tier:"A – Agency", stage:"Nurturing", lastContact:"", nextActionDate:"30/06/26", nextAction:"Check in - animation-heavy briefs?", notes:"UK agency. Cross-border flow." }),
+  // Seed intentionally empty — warm leads are managed entirely via Supabase.
+  // Seeding here caused random IDs to regenerate on every load, re-merging
+  // stale entries and overwriting the user's real CRM data. Do not add entries here.
 ];
 const SN = [
-  // ── Verified real contacts (from Google Sheet + LinkedIn confirmed) ────────
-  mk({ name:"Cheryl Warbrook", role:"Head of Production", company:"Wieden+Kennedy Amsterdam", email:"", tier:"A – Agency", stage:"New", contact:"LinkedIn", dateAdded:"04/06/26", notes:"Confirmed current HoP at W+K AMS. Key target — Nike, Samsung, Heineken, Duolingo clients. 73 mutual connections on LinkedIn." }),
-  mk({ name:"Marielle Koenders", role:"Executive Creative Producer (Freelance)", company:"Ex Vidiboko / TBWA\\NEBOKO", email:"", tier:"A – Agency", stage:"New", contact:"LinkedIn", dateAdded:"04/06/26", notes:"Has left Vidiboko/TBWA — now freelancing as Exec Creative Producer. Strong Adidas overlap, pitch on shared client background." }),
-  mk({ name:"Stefan Niemela", role:"CG Production Manager", company:"Adidas", email:"stefan.niemela@adidas.com", tier:"B – Brand", stage:"New", contact:"LinkedIn", dateAdded:"04/06/26", notes:"Direct internal Adidas contact from your 2022/2023 CG work. Dormant but warm. Re-activate: working on interesting CG projects, would love to reconnect." }),
-  mk({ name:"Karlijn Paardekoper", role:"Executive Producer", company:"CZAR Amsterdam", email:"", tier:"A – Studio", stage:"New", contact:"LinkedIn", dateAdded:"04/06/26", notes:"EP at one of NL top production companies. CZAR works with all major Dutch/EU agencies. Find via czar.tv or LinkedIn." }),
+  // Seed intentionally empty — new leads are managed via Supabase.
 ];
 const SAg = [
   mk({ name:"72andSunny Amsterdam", contact:"Julie Bourges", email:"julie.bourges@72andsunny.com", website:"https://72andsunny.com", location:"Amsterdam", priority:"5/5", status:"In Warm Leads", notes:"Reached out first. High priority." }),
