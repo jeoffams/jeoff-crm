@@ -476,8 +476,8 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
     <div style={{ padding:"16px 20px" }}>
       <div className="stat-card-row" style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:20 }}>
         {[
-          { label:"Warm Leads", val:warm.length, sub:`${warm.filter((w) => w.stage==="Conversation").length} in conversation` },
-          { label:"New Leads", val:newL.length, sub:`${newL.filter((n) => n.stage==="Contacted").length} contacted` },
+          { label:"Pipeline", val:warm.filter((w) => w.stage!=="Archived").length, sub:`${warm.filter((w) => ["Had Call","Brief Pending","Proposal"].includes(w.stage)).length} in conversation` },
+          { label:"Archived", val:warm.filter((w) => w.stage==="Archived").length, sub:"not active" },
           { label:"Agencies & Studios", val:ag.length, sub:`${ag.filter((a) => a.status==="In Warm Leads").length} in pipeline` },
           { label:"Brands", val:br.length, sub:`${br.filter((b) => b.warmIn==="Yes").length} warm contacts` },
           { label:"Applied Jobs", val:appliedJobs.length, sub:`${appliedJobs.filter((j) => j.status==="Conversation"||j.status==="Offer").length} active` },
@@ -728,7 +728,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
 };
 
 // ── Warm Leads Tab ─────────────────────────────────────────────────────────────
-const WARM_STAGES = ["Radar","Reached Out","Replied","Had Call","Brief Pending","Proposal","Won","Paused"];
+const WARM_STAGES = ["Radar","Reached Out","Replied","Had Call","Brief Pending","Proposal","Won","Paused","Archived"];
 const TIER_OPTS = ["A – Agency","A – Studio","B – Brand","B – Agency","C – Studio","C – Agency","Other"];
 
 const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive }) => {
@@ -736,7 +736,11 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
   const [archivingId, setArchivingId] = useState(null);
   const [archiveReason, setArchiveReason] = useState("");
   const [viewMode, setViewMode] = useState("table");
-  const filtered = q ? leads.filter((l) => (l.name||"").toLowerCase().includes(q.toLowerCase())||(l.company||"").toLowerCase().includes(q.toLowerCase())||(l.role||"").toLowerCase().includes(q.toLowerCase())) : leads;
+  const [showArchived, setShowArchived] = useState(false);
+  const active = leads.filter(l => l.stage !== "Archived");
+  const archived = leads.filter(l => l.stage === "Archived");
+  const pool = showArchived ? leads : active;
+  const filtered = q ? pool.filter((l) => (l.name||"").toLowerCase().includes(q.toLowerCase())||(l.company||"").toLowerCase().includes(q.toLowerCase())||(l.role||"").toLowerCase().includes(q.toLowerCase())) : pool;
   const grouped = {};
   WARM_STAGES.forEach((s) => { const g = filtered.filter((l) => (l.stage||"Radar")===s); if (g.length) grouped[s] = g; });
   filtered.forEach((l) => { const s = l.stage||"Radar"; if (!WARM_STAGES.includes(s)&&!grouped[s]) grouped[s] = filtered.filter((x) => x.stage===s); });
@@ -754,11 +758,11 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
             ⊞ Kanban
           </button>
         </div>
-        <span style={{ fontSize:11, color:C.muted }}>{leads.length} leads</span>
+        <span style={{ fontSize:11, color:C.muted }}>{active.length} active{archived.length>0 && <button onClick={()=>setShowArchived(!showArchived)} style={{ marginLeft:8, background:"none", border:"none", cursor:"pointer", fontSize:11, color:showArchived?"#7c3aed":C.muted, textDecoration:"underline", padding:0 }}>{showArchived?"Hide":"Show"} archived ({archived.length})</button>}</span>
       </div>
       {viewMode==="kanban" && (
         <div style={{ display:"flex", gap:12, overflowX:"auto", paddingBottom:8 }}>
-          {WARM_STAGES.filter(s=>s!=="Paused").map(stage => {
+          {WARM_STAGES.filter(s=>s!=="Paused"&&s!=="Archived").map(stage => {
             const cards = filtered.filter(l=>(l.stage||"Radar")===stage);
             const col = stageCol(stage);
             return (
@@ -1415,25 +1419,22 @@ export default function App() {
         const freshAgFromSeed=SAg.filter(s=>!existAgNames.has((s.name||'').toLowerCase().trim()));
         const loadedAg=(a&&a.length)?[...a,...freshAgFromSeed]:SAg;
         const loadedBr=(b&&b.length)?b:SBr;
-        const baseWarm=(w&&w.length)?w:SW;
-        const warmCos=new Set(baseWarm.map(x=>(x.company||'').toLowerCase()));
-        const warmAdds=[];
-        loadedAg.forEach(ag=>{
-          if(ag.status==='In Warm Leads'&&!warmCos.has((ag.name||'').toLowerCase())){
-            warmAdds.push(mk({name:ag.contact||'Contact TBD',role:'',company:ag.name||'',email:ag.email||'',tier:'A – Agency',stage:'Nurturing',lastContact:nowStr(),nextActionDate:'',nextAction:'Follow up — added from Agencies.',notes:ag.notes||''}));
-            warmCos.add((ag.name||'').toLowerCase());
-          }
-        });
-        loadedBr.forEach(br=>{
-          if((br.warmIn==='Yes'||br.status==='In Warm Leads')&&!warmCos.has((br.brand||'').toLowerCase())){
-            warmAdds.push(mk({name:br.contactToFind||'Contact TBD',role:'',company:br.brand||'',email:'',tier:'B – Brand',stage:'Nurturing',lastContact:nowStr(),nextActionDate:'',nextAction:'Find and reach out.',notes:br.notes||''}));
-            warmCos.add((br.brand||'').toLowerCase());
-          }
-        });
-        const finalWarm=warmAdds.length?[...baseWarm,...warmAdds]:baseWarm;
-        setWarm(finalWarm);
-        if(!w||!w.length||warmAdds.length)db.set('jw',finalWarm);
-        if (n&&n.length) setNewL(n); else { setNewL(SN); db.set("jn", SN); }
+        // Load pipeline directly — no auto-link merging (prevents resurrection bug)
+        const finalWarm = (w && w.length) ? w : [];
+        // One-time migration: move existing jn (new leads) into jw as Radar stage
+        if (n && n.length) {
+          const existIds = new Set(finalWarm.map(x=>x.id));
+          const migrated = n.filter(l=>!existIds.has(l.id)).map(l=>({
+            ...l, stage:'Radar', dateAdded:l.dateAdded||nowStr()
+          }));
+          const merged = migrated.length ? [...finalWarm,...migrated] : finalWarm;
+          setWarm(merged);
+          if(migrated.length) db.set('jw', merged);
+          db.set('jn', []); // clear jn after migration
+        } else {
+          setWarm(finalWarm);
+        }
+        setNewL([]);
         // Update known closed/merged agencies in live data
         const agMigrations={"ddb amsterdam":{status:"Closed",notes:"Merged into TBWA\\NEBOKO December 2025. Brand retired. Reach out to TBWA\\NEBOKO instead."},"fcb amsterdam":{status:"Closed",notes:"Brand retiring H1 2026, merged into BBDO Amsterdam per Omnicom restructure."},"glassworks amsterdam":{status:"Closed",notes:"BANKRUPT/CLOSED: Amsterdam filed April 2025, full liquidation August 2025."},"the mill amsterdam":{status:"Closed",notes:"CLOSED: Parent Technicolor shut down February 2025. All offices closed."},"kesselskramer":{status:"Closed",notes:"BANKRUPT June 2026 \u2014 3 major clients dropped. Curator investigating restart. Do not reach out now."},"czar":{contact:"Karlijn Paardekooper",email:"karlijn@czar.nl",notes:"EP & Managing Partner. Also Willem (EP): willem@czar.nl. Top Dutch commercial production house."},"halal":{contact:"Job Sanders",email:"job@halal.amsterdam",notes:"Head of Production/EP. NOTE: Rebranded to 100% Film (100prcnt.film) in 2025 \u2014 same team. Also Aemilia van Lent (EP)."},"hazazah":{email:"jeroen@hazazah.nl"},"tbwa neboko":{contact:"Tom Broad (Talent Director)",email:"tom.broad@tbwa.nl",notes:"Talent Director \u2014 RIGHT contact for freelance. 245 staff incl. absorbed DDB Amsterdam team."},"superheroes amsterdam":{contact:"Django Weisz Blanchetta",email:"airmail@hellosuperheroes.com",notes:"CEO & Co-Founder. Small agency so CEO is right. Won Ad Age Small Agency of Year 2025."},"fitzroy amsterdam":{contact:"Jur",email:"jur@fitzroy.nl"},"submarine":{contact:"Femke Wolting (EP)",email:"femke@submarine.nl"},"wieden+kennedy":{contact:"Jaime Tan (Head of Production)",email:"jaime.tan@wk.com",notes:"Head of Production. President: Luiza Prata Carvalho (2024). Nike, Heineken, Samsung."}};
         const closedAgUpdates={"ddb amsterdam":{status:"Closed",notes:"Merged into TBWA\\NEBOKO December 2025. Brand retired. Reach out to TBWA\\NEBOKO instead."},"fcb amsterdam":{status:"Closed",notes:"Merging into BBDO Amsterdam H1 2026 per Omnicom restructure. Brand retired."},"glassworks amsterdam":{status:"Closed",notes:"CLOSED: Bankrupt April 2025, fully liquidated August 2025."},"the mill amsterdam":{status:"Closed",notes:"CLOSED: Parent Technicolor shut down February 2025. All offices closed."},"kesselskramer":{status:"Closed",notes:"BANKRUPT June 2026 \u2014 3 major clients dropped. Curator investigating restart. Do not reach out now."}};
@@ -1510,31 +1511,10 @@ export default function App() {
 
   // Move a warm lead to the Leads pool with a reason
   const archiveToLeads = useCallback((id, reason) => {
-    setWarm((prevWarm) => {
-      const lead = prevWarm.find((x) => x.id === id);
-      if (!lead) return prevWarm;
-      const entry = mk({
-        name: lead.name || "",
-        role: lead.role || "",
-        company: lead.company || "",
-        email: lead.email || "",
-        tier: lead.tier || "A – Agency",
-        stage: "Paused",
-        contact: "LinkedIn",
-        dateAdded: lead.dateAdded || nowStr(),
-        notes: lead.notes || "",
-        movedFromWarm: {
-          date: nowStr(),
-          reason: reason || "Archived from Warm Leads",
-          lastWarmStage: lead.stage || "Radar",
-          lastContact: lead.lastContact || "",
-          lastAction: lead.nextAction || "",
-        }
-      });
-      const nWarm = prevWarm.filter((x) => x.id !== id);
-      db.set("jw", nWarm);
-      setNewL((prev) => { const next = [entry, ...prev]; db.set("jn", next); return next; });
-      return nWarm;
+    setWarm((prev) => {
+      const next = prev.map(x => x.id===id ? {...x, stage:"Archived", notes:(x.notes||'')+(reason?(' | Archived '+nowStr()+': '+reason):(' | Archived '+nowStr()))} : x);
+      db.set("jw", next);
+      return next;
     });
   }, []);
 
@@ -1667,8 +1647,7 @@ export default function App() {
 
   const TABS = [
     { id:"overview",  label:"Overview" },
-    { id:"warm",      label:"Warm Leads ("+warm.length+")" },
-    { id:"leads",     label:"Leads ("+newL.length+")" },
+    { id:"warm",      label:"Pipeline ("+warm.filter(w=>w.stage!=="Archived").length+")" },
     { id:"agencies",  label:"Agencies & Studios ("+ag.length+")" },
     { id:"brands",    label:"Brands ("+br.length+")" },
     { id:"crew",      label:"Rolodex ("+crew.length+")" },
@@ -1766,7 +1745,7 @@ export default function App() {
       <div className="content-wrap" style={{ maxWidth:1600, margin:"0 auto", paddingTop:20 }}>
         {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} pencils={pencils} onPencilChange={(p)=>{ setPencils(p); db.set("jpen",p); }} onGoToWarm={()=>setTab("warm")} />}
         {tab==="warm"      && <WarmTab leads={warm} onUpdate={upd("jw",setWarm)} onStageChange={warmStageChange} onAdd={add(setWarm,"jw",{name:"",role:"",company:"",email:"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"",notes:""})} onDelete={del("jw",setWarm)} onArchive={archiveToLeads} />}
-        {tab==="leads"     && <LeadsTab leads={newL} onUpdate={upd("jn",setNewL)} onAdd={add(setNewL,"jn",{name:"",role:"",company:"",contact:"LinkedIn",tier:"A – Agency",stage:"New",dateAdded:nowStr(),notes:""})} onPromote={promoteToWarm} onDelete={del("jn",setNewL)} />}
+        
         {tab==="agencies"  && <AgTab   data={ag}    onUpdate={updAgAndWarm}   onAdd={add(setAg,"ja",{name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""})} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
         {tab==="brands"    && <BrTab   data={br}    onUpdate={updBrAndWarm}   onAdd={add(setBr,"jb",{brand:"",contactToFind:"",sector:"",warmIn:"No",priority:"3/5",status:"Cold",notes:""})} onDelete={del("jb",setBr)} />}
         {tab==="crew"      && <CrewTab data={crew}  onUpdate={upd("jcr",setCrew)} onAdd={add(setCrew,"jcr",{name:"",specialty:"Motion Design",rate:"",email:"",website:"",location:"Amsterdam",notes:""})} onDelete={del("jcr",setCrew)} />}
