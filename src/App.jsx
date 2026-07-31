@@ -27,14 +27,29 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 //    Add: &f_WT=2 (remote) + &f_JT=C%2CF (contract/freelance)
 //    NL: geoId=102890719 | BE: geoId=100565514 | UK: geoId=101165590 | DE: geoId=101282230
 //    ALL FOUR must be run every sweep. Same keywords as Batch A+B above.
-// ─── 3. LINKEDIN POSTS — Informal freelance briefs ──────────────────────────────
+// ─── 3. LINKEDIN POSTS — Contextual brief signals (report in chat, NOT saved to CRM) ───────────
 //    URL: https://linkedin.com/search/results/content/?keywords=[term]&datePosted=past-week&sortBy=date_posted
-//    Run 3 separate post searches:
-//    Search 1 — Dutch informal: "wij zoeken producent" OR "freelance producer gezocht" OR "freelance CP gezocht"
-//    Search 2 — English informal: "anyone know a good producer" OR "looking for a producer" OR "freelance producer needed"
-//    Search 3 — Opportunity signals: "available in" amsterdam producer OR "anyone available" producer amsterdam
-//    → Key insight: informal briefs use natural language. Search broadly, not just exact job titles.
-//    → Also check recent posts by known contacts: production heads at CZAR, Hazazah, Boomerang, W+K
+//    Navigate, wait 5s, read innerText, report any relevant posts directly in chat.
+//    Use same technique as jobs sweep but present findings in chat rather than writing to Supabase.
+//
+//    Run these 4 searches in sequence:
+//
+//    Search A — Dutch production context (broad, no quotes):
+//      wij zoeken producent campagne OR freelance producent OR branded content amsterdam
+//
+//    Search B — English opportunity signals:
+//      creative producer freelance amsterdam OR production manager available netherlands
+//
+//    Search C — Jeoff's specific skill signals (animation/CG/VFX context):
+//      animatie producent gezocht OR CG producer freelance OR branded content producer amsterdam
+//
+//    Search D — Campaign & shoot context:
+//      campagne productie freelance OR shoot producer amsterdam OR postproductie producent gezocht
+//
+//    → DO NOT use exact quoted phrases — they kill recall. Unquoted terms cast a wider net.
+//    → For each result: read the post, assess if someone is LOOKING FOR a producer/PM.
+//    → Skip: people looking for work themselves, news posts, general industry content.
+//    → Report relevant posts in chat with: poster name, company, what they need, post date.
 // ─── 4. JELLOW.NL — Dutch freelance platform ─────────────────────────────────────
 //    URL: https://www.jellow.nl/opdrachten
 //    Search: "producent" / "producer" / "projectmanager" | Filter: Creative / Marketing
@@ -51,14 +66,10 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 //    DEPT:         https://job-boards.greenhouse.io/dept
 //    Booking.com:  https://jobs.booking.com (filter: Content/Creative/Production)
 //    → These post to ATS before or instead of LinkedIn
-// ─── 8. STUDIO/AGENCY SITES — Direct project briefs ─────────────────────────────
-//    Check: CZAR (czar.nl), Hazazah (hazazah.com), Monks (monks.com/careers), Wenneker (wenneker.com)
-//    NOTE: ambassadors.nl domain is for sale — skip until new URL confirmed
-//    → Studios post project needs on their own sites before anywhere else
-// ─── 9. WARM LEADS FOLLOW-UP CHECK ─────────────────────────────────────────────
+// ─── 8. WARM LEADS FOLLOW-UP CHECK ─────────────────────────────────────────────
 //    After sweep: flag any warm lead in jw with lastContact > 14 days ago (stage not Won/Paused)
 //    Include in sweep report as "Overdue follow-ups" section
-// ─── 10. RULES ──────────────────────────────────────────────────────────────────
+// ─── 9. RULES ──────────────────────────────────────────────────────────────────
 //    • Write ALL new jobs directly to Supabase (jf=freelance, jc=contract) — never just seed
 //    • NEVER write to jcr (crew/rolodex). Never modify existing entries.
 //    • Dedup by company name before writing. Skip if company already in jf or jc this month.
