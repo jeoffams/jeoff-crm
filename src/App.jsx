@@ -66,12 +66,14 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 //    DEPT:         https://job-boards.greenhouse.io/dept
 //    Booking.com:  https://jobs.booking.com (filter: Content/Creative/Production)
 //    → These post to ATS before or instead of LinkedIn
-// ─── 8. WARM LEADS FOLLOW-UP CHECK ─────────────────────────────────────────────
-//    After sweep: flag any warm lead in jw with lastContact > 14 days ago (stage not Won/Paused)
-//    Include in sweep report as "Overdue follow-ups" section
+// ─── 8. WARM LEADS FOLLOW-UP CHECK (READ-ONLY — never write to jw during sweeps) ──────────────
+//    Read jw from Supabase, check lastContact > 14 days ago (stage not Won/Paused).
+//    Report overdue contacts in chat ONLY — never update jw data during a sweep.
+//    REASON: writing jw during a sweep overwrites any changes the user made in the app (race condition).
 // ─── 9. RULES ──────────────────────────────────────────────────────────────────
 //    • Write ALL new jobs directly to Supabase (jf=freelance, jc=contract) — never just seed
-//    • NEVER write to jcr (crew/rolodex). Never modify existing entries.
+//    • NEVER write to jw (warm leads) or jcr (crew) during a sweep — read-only only.
+//      Writing jw during a sweep causes a race condition that overwrites the user's CRM edits.
 //    • Dedup by company name before writing. Skip if company already in jf or jc this month.
 //    • Include sweep date + source URL on every entry. Set isNew:true on all new entries.
 //    • Skip: pure digital/media buying, DTC performance marketing, live events touring,
