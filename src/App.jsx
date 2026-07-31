@@ -416,7 +416,7 @@ const GlobalSearch = ({ q, warm, newL, ag, br, crew, fl, ct, onGo }) => {
 // ── Overview ──────────────────────────────────────────────────────────────────
 const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChange, onGoToWarm }) => {
   const upcoming = warm.filter((w) => { const d = daysUntil(w.nextActionDate); return d >= -3 && d <= 14; }).sort((a,b) => daysUntil(a.nextActionDate)-daysUntil(b.nextActionDate));
-  const stale = warm.filter((w) => daysUntil(w.nextActionDate) < -7 && w.stage !== "Won" && w.stage !== "Paused");
+  const stale = warm.filter((w) => daysUntil(w.nextActionDate) < -7 && w.stage !== "Won" && w.stage !== "Archived");
   const staleAgencies = (ag||[]).filter(a => {
     if (a.status!=='Contact found' || !a.contact || a.contact==='TBD') return false;
     const an = (a.name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -425,7 +425,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
       return an.length>3 && (wc.includes(an.substring(0,6)) || an.includes(wc.substring(0,6)));
     });
   }).slice(0,6);
-  const pipeData = ["Radar","Nurturing","Conversation","Proposal","Won"].map((s) => ({ name:s, v:warm.filter((w) => w.stage===s).length }));
+  const pipeData = ["Radar","Reached out to me","Replied","Won"].map((s) => ({ name:s, v:warm.filter((w) => w.stage===s).length }));
   const allJobs = [...fl, ...ct];
   const appliedJobs = allJobs.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
   const appData = ["Applied","No Response","Conversation","Offer","Rejected"].map((s) => ({ name:s, v:appliedJobs.filter((j) => j.status===s).length })).filter((d) => d.v>0);
@@ -574,7 +574,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
         </div>
 
         <div style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, padding:16 }}>
-          <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:10 }}>Warm Leads Pipeline</div>
+          <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:10 }}>Pipeline</div>
           <MiniBar data={pipeData} />
           <div style={{ fontSize:12, fontWeight:700, color:C.text, marginTop:16, marginBottom:10 }}>Applications Status</div>
           <MiniBar data={appData} />
@@ -728,13 +728,12 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
 };
 
 // ── Warm Leads Tab ─────────────────────────────────────────────────────────────
-const WARM_STAGES = ["Radar","Reached Out","Replied","Had Call","Brief Pending","Proposal","Won","Paused","Archived"];
+const WARM_STAGES = ["Radar","Reached out to me","Replied","Won","Archived"];
 const TIER_OPTS = ["A – Agency","A – Studio","B – Brand","B – Agency","C – Studio","C – Agency","Other"];
 
 const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive }) => {
   const [q, setQ] = useState("");
-  const [archivingId, setArchivingId] = useState(null);
-  const [archiveReason, setArchiveReason] = useState("");
+  
   const [viewMode, setViewMode] = useState("table");
   const [showArchived, setShowArchived] = useState(false);
   const active = leads.filter(l => l.stage !== "Archived");
@@ -862,33 +861,10 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
                         </button>
                         <div style={{ fontSize:9, color:C.muted, marginTop:3, whiteSpace:"nowrap" }}>stamps today +14d</div>
                         <div style={{ marginTop:6 }}>
-                          {archivingId === l.id ? (
-                            <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                              <input
-                                autoFocus
-                                placeholder="Reason (e.g. project pivoted)..."
-                                value={archiveReason}
-                                onChange={(e) => setArchiveReason(e.target.value)}
-                                onKeyDown={(e) => { if (e.key==="Enter") { onArchive(l.id, archiveReason); setArchivingId(null); setArchiveReason(""); } if (e.key==="Escape") { setArchivingId(null); setArchiveReason(""); } }}
-                                style={{ border:`1px solid ${C.border}`, borderRadius:4, padding:"3px 6px", fontSize:10, outline:"none", width:140 }}
-                              />
-                              <div style={{ display:"flex", gap:3 }}>
-                                <button onClick={() => { onArchive(l.id, archiveReason); setArchivingId(null); setArchiveReason(""); }}
-                                  style={{ background:"#f1f5f9", color:C.text, border:`1px solid ${C.border}`, borderRadius:4, padding:"3px 7px", cursor:"pointer", fontSize:10, fontWeight:600, flex:1 }}>
-                                  Move
-                                </button>
-                                <button onClick={() => { setArchivingId(null); setArchiveReason(""); }}
-                                  style={{ background:"none", color:C.muted, border:`1px solid ${C.border}`, borderRadius:4, padding:"3px 6px", cursor:"pointer", fontSize:10 }}>
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <button onClick={() => { setArchivingId(l.id); setArchiveReason(""); }}
+                          <button onClick={() => onArchive(l.id, "")}
                               style={{ background:"#f1f5f9", color:"#475569", border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>
-                              Archive to Leads
+                              Archive
                             </button>
-                          )}
                         </div>
                         <div style={{ marginTop:4 }}>
                           <button onClick={()=>{ onUpdate(l.id,"lastContact",nowStr()); onUpdate(l.id,"nextActionDate",plus14()); }} style={{ background:"none", color:"#059669", border:"1px solid #05966944", borderRadius:5, padding:"3px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>✓ Contacted today</button>
