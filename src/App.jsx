@@ -447,7 +447,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
     setNewPen({ person:"", company:"", rate:"", startDate:"", endDate:"", type:"Pencil", year:addingForYear||curYear });
     setAddingForYear(null);
   };
-  const togglePenType = (id) => { onPencilChange&&onPencilChange(pencils.map(p=>p.id===id?{...p,type:p.type==="Pencil"?"Booking":"Pencil"}:p)); };
+  const togglePenType = (id) => { onPencilChange&&onPencilChange(pencils.map(p=>p.id===id?{...p,type:p.type==="Pencil"?"Booking":p.type==="Booking"?"Time Off":"Pencil"}:p)); };
   const deletePen = (id) => { onPencilChange&&onPencilChange(pencils.filter(p=>p.id!==id)); };
   const [editPenId,setEditPenId] = useState(null);
   const [editPen,setEditPen] = useState(null);
@@ -628,7 +628,19 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
             </div>
         {!hiddenYears.includes(yr) && addingForYear===yr && (
           <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, background:"#fff8f7", display:"flex", flexWrap:"wrap", gap:8, alignItems:"flex-end" }}>
-            {[["CONTACT","person","e.g. Tommaso",90],["COMPANY","company","Monks",120],[String.fromCharCode(8364)+"/DAY","rate","600",65],["FROM (DD/MM/YY)","startDate","15/06/26",105],["TO (DD/MM/YY)","endDate","31/08/26",105]].map(([lbl,key,ph,w])=>(
+            {newPen.type!=="Time Off" && [["CONTACT","person","e.g. Tommaso",90],["COMPANY","company","Monks",120],[String.fromCharCode(8364)+"/DAY","rate","600",65]].map(([lbl,key,ph,w])=>(
+              <div key={key} style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                <span style={{ fontSize:9, color:C.muted, fontWeight:700 }}>{lbl}</span>
+                <input value={newPen[key]} onChange={e=>setNewPen(p=>({...p,[key]:e.target.value}))} placeholder={ph} style={{ border:`1px solid ${C.border}`, borderRadius:5, padding:"5px 8px", fontSize:12, width:w, outline:"none" }} />
+              </div>
+            ))}
+            {newPen.type==="Time Off" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                <span style={{ fontSize:9, color:C.muted, fontWeight:700 }}>LABEL (optional)</span>
+                <input value={newPen.company||""} onChange={e=>setNewPen(p=>({...p,company:e.target.value}))} placeholder="Holiday, Sick, etc." style={{ border:`1px solid ${C.border}`, borderRadius:5, padding:"5px 8px", fontSize:12, width:120, outline:"none" }} />
+              </div>
+            )}
+            {[["FROM (DD/MM/YY)","startDate","15/06/26",105],["TO (DD/MM/YY)","endDate","31/08/26",105]].map(([lbl,key,ph,w])=>(
               <div key={key} style={{ display:"flex", flexDirection:"column", gap:3 }}>
                 <span style={{ fontSize:9, color:C.muted, fontWeight:700 }}>{lbl}</span>
                 <input value={newPen[key]} onChange={e=>setNewPen(p=>({...p,[key]:e.target.value}))} placeholder={ph} style={{ border:`1px solid ${C.border}`, borderRadius:5, padding:"5px 8px", fontSize:12, width:w, outline:"none" }} />
@@ -636,7 +648,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
             ))}
             <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
               <span style={{ fontSize:9, color:C.muted, fontWeight:700 }}>TYPE</span>
-              <button onClick={()=>setNewPen(p=>({...p,type:p.type==="Pencil"?"Booking":"Pencil"}))} style={{ background:newPen.type==="Booking"?"#10b981":"#f59e0b", color:"#fff", border:"none", borderRadius:5, padding:"5px 10px", cursor:"pointer", fontSize:11, fontWeight:700, width:80 }}>{newPen.type==="Booking"?"✓ Booking":"✏ Pencil"}</button>
+              <button onClick={()=>setNewPen(p=>({...p,type:p.type==="Pencil"?"Booking":p.type==="Booking"?"Time Off":"Pencil"}))} style={{ background:newPen.type==="Booking"?"#10b981":newPen.type==="Time Off"?"#6366f1":"#f59e0b", color:"#fff", border:"none", borderRadius:5, padding:"5px 10px", cursor:"pointer", fontSize:11, fontWeight:700, width:86 }}>{newPen.type==="Booking"?"✓ Booking":newPen.type==="Time Off"?"🌴 Time Off":"✏ Pencil"}</button>
             </div>
             <div style={{ display:"flex", gap:6, paddingBottom:1 }}>
               <button onClick={savePen} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"5px 14px", cursor:"pointer", fontSize:11, fontWeight:700 }}>Save</button>
@@ -676,7 +688,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
                   ))}
                   <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
                     <span style={{ fontSize:9, color:C.muted, fontWeight:700 }}>TYPE</span>
-                    <button onClick={()=>setEditPen(p=>({...p,type:p.type==="Pencil"?"Booking":"Pencil"}))} style={{ background:editPen.type==="Booking"?"#10b981":"#f59e0b", color:"#fff", border:"none", borderRadius:5, padding:"4px 9px", cursor:"pointer", fontSize:10, fontWeight:700, width:80 }}>{editPen.type==="Booking"?"✓ Booking":"✏ Pencil"}</button>
+                    <button onClick={()=>setEditPen(p=>({...p,type:p.type==="Pencil"?"Booking":p.type==="Booking"?"Time Off":"Pencil"}))} style={{ background:editPen.type==="Booking"?"#10b981":editPen.type==="Time Off"?"#6366f1":"#f59e0b", color:"#fff", border:"none", borderRadius:5, padding:"4px 9px", cursor:"pointer", fontSize:10, fontWeight:700, width:86 }}>{editPen.type==="Booking"?"✓ Booking":editPen.type==="Time Off"?"🌴 Time Off":"✏ Pencil"}</button>
                   </div>
                   <div style={{ display:"flex", gap:5, paddingBottom:1 }}>
                     <button onClick={saveEditPen} style={{ background:R, color:"#fff", border:"none", borderRadius:5, padding:"4px 12px", cursor:"pointer", fontSize:10, fontWeight:700 }}>Save</button>
@@ -686,7 +698,8 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
               );
               const bar = tBar_y(p);
               const isBook = p.type==="Booking";
-              const col = isBook ? "#10b981" : "#f59e0b";
+              const isTimeOff = p.type==="Time Off";
+              const col = isBook ? "#10b981" : isTimeOff ? "#6366f1" : "#f59e0b";
               return (
                 <div key={p.id} style={{ display:"flex", alignItems:"stretch", borderBottom:`1px solid ${C.border}`, minHeight:40 }}>
                   <div style={{ width:230, flexShrink:0, padding:"6px 6px 6px 8px", borderRight:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:5 }}>
