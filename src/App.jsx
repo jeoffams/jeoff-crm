@@ -707,7 +707,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
                       <button onClick={()=>movePen(p.id,-1)} disabled={pIdx===0} style={{ background:"none", border:"none", cursor:pIdx===0?"default":"pointer", color:pIdx===0?C.border:C.muted, fontSize:10, padding:"1px 3px", lineHeight:1 }}>▴</button>
                       <button onClick={()=>movePen(p.id,1)} disabled={pIdx===yrEntries.length-1} style={{ background:"none", border:"none", cursor:pIdx===yrEntries.length-1?"default":"pointer", color:pIdx===yrEntries.length-1?C.border:C.muted, fontSize:10, padding:"1px 3px", lineHeight:1 }}>▾</button>
                     </div>
-                    <button onClick={()=>togglePenType(p.id)} style={{ background:col, color:"#fff", border:"none", borderRadius:4, padding:"2px 6px", cursor:"pointer", fontSize:9, fontWeight:700, flexShrink:0, whiteSpace:"nowrap" }}>{isBook?"✓ Booking":"✏ Pencil"}</button>
+                    <button onClick={()=>togglePenType(p.id)} style={{ background:col, color:"#fff", border:"none", borderRadius:4, padding:"2px 6px", cursor:"pointer", fontSize:9, fontWeight:700, flexShrink:0, whiteSpace:"nowrap" }}>{isBook?"✓ Booking":isTimeOff?"🌴 Time off":"✏ Pencil"}</button>
                     <div style={{ minWidth:0 }}>
                       <div style={{ fontSize:11, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.company||"—"}</div>
                       <div style={{ fontSize:10, color:C.muted, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{[p.person, p.rate?(String.fromCharCode(8364)+p.rate+'/d'):null].filter(Boolean).join(' · ')}</div>
@@ -716,8 +716,8 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
                   <div style={{ flex:1, position:"relative" }}>
                     <div style={{ position:"absolute", left:tPct(tNow), top:0, bottom:0, width:2, background:R, opacity:0.15 }} />
                     {bar && (
-                      <div style={{ position:"absolute", top:"50%", transform:"translateY(-50%)", left:bar.left, width:bar.width, height:18, background:isBook?col:col+'28', border:isBook?"none":`2px dashed ${col}`, borderRadius:4, display:"flex", alignItems:"center", overflow:"hidden" }}>
-                        <span style={{ fontSize:9, color:isBook?"#fff":col, fontWeight:700, padding:"0 5px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.startDate}{p.endDate?' → '+p.endDate:''}</span>
+                      <div style={{ position:"absolute", top:"50%", transform:"translateY(-50%)", left:bar.left, width:bar.width, height:18, background:(isBook||isTimeOff)?col:col+'28', border:(isBook||isTimeOff)?"none":`2px dashed ${col}`, borderRadius:4, display:"flex", alignItems:"center", overflow:"hidden" }}>
+                        <span style={{ fontSize:9, color:(isBook||isTimeOff)?"#fff":col, fontWeight:700, padding:"0 5px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.startDate}{p.endDate?' → '+p.endDate:''}</span>
                       </div>
                     )}
                   </div>
