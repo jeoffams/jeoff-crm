@@ -10,6 +10,7 @@ const nowStr = () => { const d = new Date(); return `${String(d.getDate()).padSt
 const parseDate = (s) => { if (!s) return null; const p = s.split("/"); if (p.length !== 3) return null; return new Date(2000+parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0])); };
 const daysUntil = (s) => { const d = parseDate(s); if (!d) return 999; return Math.round((d - new Date()) / 86400000); };
 const plus14 = () => { const d = new Date(); d.setDate(d.getDate()+14); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()).slice(2)}`; };
+const plusDays = (n) => { const d = new Date(); d.setDate(d.getDate()+n); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()).slice(2)}`; };
 const daysSince = (s) => { const d = parseDate(s); if (!d) return 999; return Math.round((new Date() - d) / 86400000); };
 const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc); if (d > 28) return "#fff5f5"; if (d > 14) return "#fef3c7"; if (d > 7) return "#fffbeb"; return "#fff"; };
 
@@ -859,9 +860,15 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
                       <td style={{ padding:"8px 10px", fontSize:11, color:C.muted, verticalAlign:"top", whiteSpace:"nowrap" }}>{l.lastContact||"—"}</td>
                       <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:160 }}>
                         <EditCell value={l.nextAction} onSave={(v) => onUpdate(l.id,"nextAction",v)} multi />
-                        <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:4 }}>
-                          <EditCell value={l.nextActionDate} onSave={(v) => onUpdate(l.id,"nextActionDate",v)} />
-                          {l.nextActionDate && <span style={{ fontSize:10, color:dc, flexShrink:0 }}>{du<0 ? `${Math.abs(du)}d over` : du===0 ? "today" : `${du}d`}</span>}
+                        <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:5, flexWrap:"wrap" }}>
+                          {[3,7,14].map(n=>(
+                            <button key={n} onClick={()=>onUpdate(l.id,"nextActionDate",plusDays(n))}
+                              style={{ background:l.nextActionDate===plusDays(n)?"#f0fdf4":"none", border:`1px solid ${C.border}`, borderRadius:4, padding:"2px 7px", cursor:"pointer", fontSize:10, fontWeight:600, color:C.muted, whiteSpace:"nowrap" }}>+{n}d</button>
+                          ))}
+                          {l.nextActionDate && <>
+                            <span style={{ fontSize:10, color:du<0?R:du<=2?"#d97706":"#059669", fontWeight:600, flexShrink:0 }}>{du<0?`${Math.abs(du)}d overdue`:du===0?"today":`in ${du}d`}</span>
+                            <button onClick={()=>onUpdate(l.id,"nextActionDate","")} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:C.muted, padding:"0 2px", lineHeight:1 }} title="Clear reminder">×</button>
+                          </>}
                         </div>
                       </td>
                       <td style={{ padding:"8px 10px", minWidth:180, maxWidth:360, verticalAlign:"top", resize:"horizontal", overflow:"hidden" }}>
@@ -879,9 +886,7 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
                               Archive
                             </button>
                         </div>
-                        <div style={{ marginTop:4 }}>
-                          <button onClick={()=>{ onUpdate(l.id,"lastContact",nowStr()); onUpdate(l.id,"nextActionDate",plus14()); }} style={{ background:"none", color:"#059669", border:"1px solid #05966944", borderRadius:5, padding:"3px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>✓ Contacted today</button>
-                        </div>
+                        
                         <div style={{ marginTop:4 }}><DeleteBtn onDelete={() => onDelete(l.id)} /></div>
                       </td>
                     </tr>
