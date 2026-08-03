@@ -1374,43 +1374,17 @@ export default function App() {
   const initialLoad    = useRef(true);
   const searchRef = useRef(null);
 
-  // ── Mutual sync: Pipeline ↔ Agency/Brand status (safe, debounced, status-only) ───────────────
+  // ── Auto-link leads to agencies/brands ─────────────────────────────────────────
   useEffect(() => {
-    if (!appReady || !initialLoad.current) return;
-    // Only sync status — never create entries, never write to jw
-    const timer = setTimeout(() => {
-      const warmCos = new Set(
-        warm.filter(w => w.stage !== 'Archived')
-            .map(w => (w.company||'').toLowerCase().replace(/[^a-z0-9]/g,''))
-            .filter(c => c.length > 3)
-      );
-      if (!warmCos.size) return;
-      setAg(prev => {
-        let changed = false;
-        const next = prev.map(a => {
-          if (a.status === 'Won') return a;
-          const an = (a.name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-          const match = an.length > 3 && [...warmCos].some(c => c.includes(an.slice(0,6)) || an.includes(c.slice(0,6)));
-          if (match && a.status !== 'In Warm Leads') { changed = true; return {...a, status:'In Warm Leads'}; }
-          return a;
-        });
-        if (changed) db.set('ja', next);
-        return changed ? next : prev;
-      });
-      setBr(prev => {
-        let changed = false;
-        const next = prev.map(b => {
-          const bn = (b.brand||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-          const match = bn.length > 3 && [...warmCos].some(c => c.includes(bn.slice(0,6)) || bn.includes(c.slice(0,6)));
-          if (match && b.warmIn !== 'Yes') { changed = true; return {...b, warmIn:'Yes', status:'In Warm Leads'}; }
-          return b;
-        });
-        if (changed) db.set('jb', next);
-        return changed ? next : prev;
-      });
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [warm, appReady]);
+    if (!appReady) return;
+    [...newL, ...warm].forEach(lead => {
+      if (!lead.name || !lead.company) return;
+      const key = (lead.name + '|' + lead.company).toLowerCase();
+      if (linkedRef.current.has(key)) return;
+      linkedRef.current.add(key);
+      autoLinkContact(lead);
+    });
+  }, [newL, warm, appReady]);
 
   // ── Auth session ────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1764,15 +1738,38 @@ export default function App() {
       {/* Content */}
       <div className="content-wrap" style={{ maxWidth:1600, margin:"0 auto", paddingTop:20 }}>
         {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} pencils={pencils} onPencilChange={(p)=>{ setPencils(p); db.set("jpen",p); }} onGoToWarm={()=>setTab("warm")} />}
-        {tab==="warm"      && <WarmTab leads={warm} onUpdate={upd("jw",setWarm)} onStageChange={warmStageChange} onAdd={(extra={}) => {
-              const defaults={name:"",role:"",company:"",email:"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"",notes:""};
-              const item=mk({...defaults,...extra});
-              setWarm(prev=>{ const next=[...prev,item]; db.set("jw",next); return next; });
-              if(item.company && item.name) autoLinkContact(item);
-            }} onDelete={del("jw",setWarm)} onArchive={archiveToLeads} />}
+        {tab==="warm"      && <WarmTab leads={warm} onUpdate={upd("jw",setWarm)} onStageChange={warmStageChange} onAdd={add(setWarm,"jw",{name:"",role:"",company:"",email:"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"",notes:""})} onDelete={del("jw",setWarm)} onArchive={archiveToLeads} />}
         
-        {tab==="agencies"  && <AgTab   data={ag}    onUpdate={updAgAndWarm}   onAdd={add(setAg,"ja",{name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""})} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
-        {tab==="brands"    && <BrTab   data={br}    onUpdate={updBrAndWarm}   onAdd={add(setBr,"jb",{brand:"",contactToFind:"",sector:"",warmIn:"No",priority:"3/5",status:"Cold",notes:""})} onDelete={del("jb",setBr)} />}
+        {tab==="agencies"  && <AgTab   data={ag}    onUpdate={updAgAndWarm}   onAdd={(extra={}) => {
+              const defaults={name:"",contact:"",email:"",website:"",location:"Amsterdam",priority:"3/5",status:"Find contact",notes:""};
+              const item=mk({...defaults,...extra});
+              setAg(prev=>{ const next=[...prev,item]; db.set("ja",next); return next; });
+              // Auto-create pipeline entry if a real contact name is provided
+              if(item.contact && item.contact!=="TBD" && item.contact.trim()!=="") {
+                setWarm(prev=>{
+                  const alreadyIn=prev.some(w=>(w.name||"").toLowerCase().includes((item.contact||"").toLowerCase().split(" ")[0].toLowerCase()) && (w.company||"").toLowerCase().includes((item.name||"").toLowerCase().slice(0,5)));
+                  if(alreadyIn) return prev;
+                  const lead=mk({name:item.contact,role:"",company:item.name,email:item.email||"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"Added from Agencies tab.",notes:""});
+                  const next=[...prev,lead]; db.set("jw",next); return next;
+                });
+                setAg(prev=>{ const next=prev.map(a=>a.id===item.id?{...a,status:"In Warm Leads"}:a); db.set("ja",next); return next; });
+              }
+            }} onDelete={del("ja",setAg)} warm={warm} leads={newL} />}
+        {tab==="brands"    && <BrTab   data={br}    onUpdate={updBrAndWarm}   onAdd={(extra={}) => {
+              const defaults={brand:"",contactToFind:"",sector:"",warmIn:"No",priority:"3/5",status:"Cold",notes:""};
+              const item=mk({...defaults,...extra});
+              setBr(prev=>{ const next=[...prev,item]; db.set("jb",next); return next; });
+              // Auto-create pipeline entry if a real contact name is provided
+              if(item.contactToFind && item.contactToFind!=="TBD" && !item.contactToFind.startsWith("Head of") && item.contactToFind.trim()!=="") {
+                setWarm(prev=>{
+                  const alreadyIn=prev.some(w=>(w.name||"").toLowerCase().includes((item.contactToFind||"").toLowerCase().split(" ")[0].toLowerCase()) && (w.company||"").toLowerCase().includes((item.brand||"").toLowerCase().slice(0,5)));
+                  if(alreadyIn) return prev;
+                  const lead=mk({name:item.contactToFind,role:"",company:item.brand,email:"",tier:"B – Brand",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"Added from Brands tab.",notes:""});
+                  const next=[...prev,lead]; db.set("jw",next); return next;
+                });
+                setBr(prev=>{ const next=prev.map(b=>b.id===item.id?{...b,warmIn:"Yes",status:"In Warm Leads"}:b); db.set("jb",next); return next; });
+              }
+            }} onDelete={del("jb",setBr)} />}
         {tab==="crew"      && <CrewTab data={crew}  onUpdate={upd("jcr",setCrew)} onAdd={add(setCrew,"jcr",{name:"",specialty:"Motion Design",rate:"",email:"",website:"",location:"Amsterdam",notes:""})} onDelete={del("jcr",setCrew)} />}
         {tab==="freelance" && <JobsTab data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} onClose={closeJob("jf",setFl)} onDelete={del("jf",setFl)} />}
         {tab==="contract"  && <JobsTab data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} onClose={closeJob("jc",setCt)} onDelete={del("jc",setCt)} />}
