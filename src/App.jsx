@@ -436,7 +436,6 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, onPencilChange, onGoToW
   const appliedJobs = allJobs.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
   const appData = ["Applied","No Response","Conversation","Offer","Rejected"].map((s) => ({ name:s, v:appliedJobs.filter((j) => j.status===s).length })).filter((d) => d.v>0);
   const newJobs = fl.filter((j) => j.isNew).length + ct.filter((j) => j.isNew).length;
-  const pencils = _pencils || [];
   const curYear = new Date().getFullYear();
   const realPencils = pencils.filter(p=>!p.__sentinel);
   const shownYears = Array.from(new Set(pencils.map(p=>p.year||curYear))).sort((a,b)=>b-a);
@@ -488,7 +487,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, onPencilChange, onGoToW
               {availDays<0?"Available now":`Available from ${availFrom}`}
             </div>
             <div style={{ fontSize:11, color:C.muted }}>
-              {latestBooking?.`${latestBooking.company||''}` && `Current booking: ${latestBooking.company} → ${latestBooking.endDate}`}
+              {latestBooking && latestBooking.company && ("Current booking: "+latestBooking.company+" → "+latestBooking.endDate)}
             </div>
           </div>
         </div>
