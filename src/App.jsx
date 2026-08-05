@@ -770,450 +770,148 @@ const TIER_OPTS = ["A – Agency","A – Studio","B – Brand","B – Agency","C
 
 const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive }) => {
   const [q, setQ] = useState("");
-  
-  const [viewMode, setViewMode] = useState("table");
   const [showArchived, setShowArchived] = useState(false);
-  const active = leads.filter(l => l.stage !== "Archived");
+
+  const active  = leads.filter(l => l.stage !== "Archived");
   const archived = leads.filter(l => l.stage === "Archived");
-  const pool = showArchived ? leads : active;
-  const filtered = q ? pool.filter((l) => (l.name||"").toLowerCase().includes(q.toLowerCase())||(l.company||"").toLowerCase().includes(q.toLowerCase())||(l.role||"").toLowerCase().includes(q.toLowerCase())) : pool;
-  const grouped = {};
-  WARM_STAGES.forEach((s) => { const g = filtered.filter((l) => (l.stage||"Radar")===s); if (g.length) grouped[s] = g; });
-  filtered.forEach((l) => { const s = l.stage||"Radar"; if (!WARM_STAGES.includes(s)&&!grouped[s]) grouped[s] = filtered.filter((x) => x.stage===s); });
-  return (
-    <div style={{ padding:"16px 20px" }}>
-      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, flexWrap:"wrap" }}>
-        <input type="text" placeholder="Search name, company, role..." value={q} onChange={(e) => setQ(e.target.value)}
-          style={{ border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 10px", fontSize:12, outline:"none", width:220, background:"#fff" }} />
-        <AddBtn label="Add Lead" onClick={onAdd} />
-        <div style={{ display:"flex", gap:4, marginLeft:"auto" }}>
-          <button onClick={()=>setViewMode("table")} style={{ background:viewMode==="table"?R:"none", color:viewMode==="table"?"#fff":C.muted, border:`1px solid ${viewMode==="table"?R:C.border}`, borderRadius:5, padding:"5px 10px", cursor:"pointer", fontSize:11, fontWeight:600 }}>
-            ☰ Table
-          </button>
-          <button onClick={()=>setViewMode("kanban")} style={{ background:viewMode==="kanban"?R:"none", color:viewMode==="kanban"?"#fff":C.muted, border:`1px solid ${viewMode==="kanban"?R:C.border}`, borderRadius:5, padding:"5px 10px", cursor:"pointer", fontSize:11, fontWeight:600 }}>
-            ⊞ Kanban
-          </button>
-        </div>
-        <span style={{ fontSize:11, color:C.muted }}>{active.length} active{archived.length>0 && <button onClick={()=>setShowArchived(!showArchived)} style={{ marginLeft:8, background:"none", border:"none", cursor:"pointer", fontSize:11, color:showArchived?"#7c3aed":C.muted, textDecoration:"underline", padding:0 }}>{showArchived?"Hide":"Show"} archived ({archived.length})</button>}</span>
-      </div>
-      {viewMode==="kanban" && (
-        <div style={{ display:"flex", gap:12, overflowX:"auto", paddingBottom:8 }}>
-          {WARM_STAGES.filter(s=>s!=="Paused"&&s!=="Archived").map(stage => {
-            const cards = filtered.filter(l=>(l.stage||"Radar")===stage);
-            const col = stageCol(stage);
-            return (
-              <div key={stage} style={{ minWidth:220, flex:"0 0 220px" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8, padding:"6px 10px", background:col+"18", borderRadius:7, borderLeft:`3px solid ${col}` }}>
-                  <span style={{ fontSize:11, fontWeight:700, color:col }}>{stage}</span>
-                  <span style={{ fontSize:10, color:col, background:col+"22", borderRadius:10, padding:"1px 6px" }}>{cards.length}</span>
-                </div>
-                {cards.map(l => {
-                  const ds = daysSince(l.lastContact);
-                  const du = daysUntil(l.nextActionDate);
-                  const heatDot = ds>14 ? R : ds>7 ? "#d97706" : "#059669";
-                  const stageIdx = WARM_STAGES.indexOf(l.stage||"Radar");
-                  return (
-                    <div key={l.id} style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:7, padding:"10px 12px", marginBottom:8, boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
-                        <div>
-                          <div style={{ fontSize:12, fontWeight:700 }}>{l.name||"—"}</div>
-                          <div style={{ fontSize:10, color:C.muted }}>{l.company||""}{l.role?(" · "+l.role):""}</div>
-                        </div>
-                        <span style={{ width:8, height:8, borderRadius:"50%", background:heatDot, flexShrink:0, marginTop:3 }} />
-                      </div>
-                      {l.nextAction && <div style={{ fontSize:10, color:C.text, background:"#f8f8f8", borderRadius:4, padding:"4px 6px", marginTop:4 }}>{l.nextAction.substring(0,80)}</div>}
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:8 }}>
-                        <div style={{ display:"flex", gap:3 }}>
-                          {stageIdx>0 && <button onClick={()=>onStageChange(l.id,WARM_STAGES[stageIdx-1])} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:4, padding:"2px 6px", cursor:"pointer", fontSize:9, color:C.muted }}>←</button>}
-                          {stageIdx<WARM_STAGES.length-1 && <button onClick={()=>onStageChange(l.id,WARM_STAGES[stageIdx+1])} style={{ background:col, border:"none", borderRadius:4, padding:"2px 6px", cursor:"pointer", fontSize:9, color:"#fff", fontWeight:700 }}>→</button>}
-                        </div>
-                        <button onClick={()=>{ onUpdate(l.id,"lastContact",nowStr()); onUpdate(l.id,"nextActionDate",plus14()); }} style={{ background:"none", color:"#059669", border:"1px solid #05966944", borderRadius:4, padding:"2px 6px", cursor:"pointer", fontSize:9, fontWeight:600 }}>✓ today</button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {cards.length===0 && <div style={{ fontSize:11, color:C.muted, padding:"12px 8px", textAlign:"center", fontStyle:"italic" }}>Empty</div>}
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {viewMode==="table" && Object.entries(grouped).map(([stage, grp]) => (
-        <div key={stage} style={{ marginBottom:20 }}>
-          <SecHd label={stage} count={grp.length} color={stageCol(stage)} />
-          <div style={{ overflowX:"auto" }}>
-            <table style={{ width:"100%", borderCollapse:"collapse", minWidth:1000 }}>
-              <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
-                {["NAME","ROLE","COMPANY","EMAIL","LI","TIER","STAGE","LAST CONTACT","NEXT ACTION / DATE","NOTES",""].map((h,i) => <th key={i} className={i===0?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
-              </tr></thead>
-              <tbody>
-                {grp.map((l) => {
-                  const du = daysUntil(l.nextActionDate);
-                  const dc = du<0 ? R : du<=3 ? R : du<=7 ? "#d97706" : C.muted;
-                  const rowBg = contactHeat(l.lastContact);
-                  return (
-                    <tr key={l.id} style={{ borderBottom:`1px solid ${C.border}`, background:rowBg }}>
-                      <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:110, backgroundColor:rowBg }}>
-                        <EditCell value={l.name} onSave={(v) => onUpdate(l.id,"name",v)} />
-                      </td>
-                      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:110 }}>
-                        <EditCell value={l.role} onSave={(v) => onUpdate(l.id,"role",v)} />
-                      </td>
-                      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:130 }}>
-                        <EditCell value={l.company} onSave={(v) => onUpdate(l.id,"company",v)} />
-                      </td>
-                      <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top" }}>
-                        <EditCell value={l.email} onSave={(v) => onUpdate(l.id,"email",v)} />
-                      </td>
-                      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:70 }}>
-                        <EditCell value={l.linkedin||""} onSave={(v)=>onUpdate(l.id,"linkedin",v)} />
-                        {l.linkedin && <a href={l.linkedin} target="_blank" rel="noreferrer" style={{ display:"block",fontSize:10,color:R,marginTop:2,textDecoration:"none",fontWeight:600 }}>↗ Open</a>}
-                      </td>
-                      <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-                        <Sel value={l.tier||"A – Agency"} opts={TIER_OPTS} onChange={(v) => onUpdate(l.id,"tier",v)} />
-                      </td>
-                      <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-                        <Sel value={l.stage||"Radar"} opts={WARM_STAGES} onChange={(v) => onStageChange(l.id, v)} />
-                        {l.stageLog && l.stageLog.length > 0 && (
-                          <div style={{ marginTop:4 }}>
-                            {l.stageLog.slice(-3).map((e, i) => <div key={i} style={{ fontSize:9, color:C.muted }}>{e}</div>)}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ padding:"8px 10px", fontSize:11, color:C.muted, verticalAlign:"top", whiteSpace:"nowrap" }}>{l.lastContact||"—"}</td>
-                      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:160 }}>
-                        <EditCell value={l.nextAction} onSave={(v) => onUpdate(l.id,"nextAction",v)} multi />
-                        <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:5, flexWrap:"wrap" }}>
-                          {[3,7,14].map(n=>(
-                            <button key={n} onClick={()=>onUpdate(l.id,"nextActionDate",plusDays(n))}
-                              style={{ background:l.nextActionDate===plusDays(n)?"#f0fdf4":"none", border:`1px solid ${C.border}`, borderRadius:4, padding:"2px 7px", cursor:"pointer", fontSize:10, fontWeight:600, color:C.muted, whiteSpace:"nowrap" }}>+{n}d</button>
-                          ))}
-                          {l.nextActionDate && <>
-                            <span style={{ fontSize:10, color:du<0?R:du<=2?"#d97706":"#059669", fontWeight:600, flexShrink:0 }}>{du<0?`${Math.abs(du)}d overdue`:du===0?"today":`in ${du}d`}</span>
-                            <button onClick={()=>onUpdate(l.id,"nextActionDate","")} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:C.muted, padding:"0 2px", lineHeight:1 }} title="Clear reminder">×</button>
-                          </>}
-                        </div>
-                      </td>
-                      <td style={{ padding:"8px 10px", minWidth:180, maxWidth:360, verticalAlign:"top", resize:"horizontal", overflow:"hidden" }}>
-                        <EditCell value={l.notes} onSave={(v) => onUpdate(l.id,"notes",v)} multi />
-                      </td>
-                      <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-                        <button onClick={() => { onUpdate(l.id,"lastContact",nowStr()); onUpdate(l.id,"nextActionDate",plus14()); }}
-                          style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>
-                          Reached Out
-                        </button>
-                        <div style={{ fontSize:9, color:C.muted, marginTop:3, whiteSpace:"nowrap" }}>stamps today +14d</div>
-                        <div style={{ marginTop:6 }}>
-                          <button onClick={() => onArchive(l.id, "")}
-                              style={{ background:"#f1f5f9", color:"#475569", border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>
-                              Archive
-                            </button>
-                        </div>
-                        
-                        <div style={{ marginTop:4 }}><DeleteBtn onDelete={() => onDelete(l.id)} /></div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
 
-// ── Leads Tab (general pool — new contacts + archived warm leads) ──────────────
-const LEAD_STAGES = ["New","Contacted","Responded","Meeting Set","Paused","Won","Cold","Reconnect"];
-const ACTIVE_STAGES = ["New","Contacted","Responded","Meeting Set","Reconnect"];
-const ARCHIVE_STAGES = ["Paused","Won","Cold"];
-const VIA_OPTS = ["LinkedIn","Email","Referral","Event","Cold outreach","Other"];
+  // Won entries pinned at top (confirmed bookings)
+  const won  = active.filter(l => l.stage === "Won");
+  const rest = active.filter(l => l.stage !== "Won");
 
-const LeadsTab = ({ leads, onUpdate, onAdd, onPromote, onDelete }) => {
-  const [q, setQ] = useState("");
-  const filtered = q ? leads.filter((l) =>
-    (l.name||"").toLowerCase().includes(q.toLowerCase()) ||
-    (l.company||"").toLowerCase().includes(q.toLowerCase()) ||
-    (l.role||"").toLowerCase().includes(q.toLowerCase())
-  ) : leads;
+  const nowD = new Date();
+  const parseDT = (s) => { if(!s) return null; const p=s.split('/'); if(p.length!==3) return null; return new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); };
+  const daysSince = (d) => { const dt=parseDT(d); return dt ? Math.floor((nowD-dt)/86400000) : 999; };
+  const daysUntilNA = (d) => { const dt=parseDT(d); return dt ? Math.ceil((dt-nowD)/86400000) : null; };
 
-  const active = filtered.filter((l) => ACTIVE_STAGES.includes(l.stage||"New"));
-  const archived = filtered.filter((l) => ARCHIVE_STAGES.includes(l.stage||"New"));
-
-  const stageCol = (s) => {
-    if (s==="Contacted") return "#d97706";
-    if (s==="Responded"||s==="Meeting Set") return "#059669";
-    if (s==="Paused") return C.muted;
-    if (s==="Won") return "#16a34a";
-    if (s==="Cold") return "#94a3b8";
-    if (s==="Reconnect") return "#7c3aed";
-    return C.muted;
+  // Sort: starred → overdue next action → longest since last contact
+  const sortFn = (a,b) => {
+    if(!!b.starred !== !!a.starred) return b.starred ? 1 : -1;
+    const aDue=daysUntilNA(a.nextActionDate), bDue=daysUntilNA(b.nextActionDate);
+    const aOver=aDue!==null&&aDue<0, bOver=bDue!==null&&bDue<0;
+    if(aOver!==bOver) return aOver?-1:1;
+    if(aOver&&bOver) return aDue-bDue;
+    return daysSince(b.lastContact)-daysSince(a.lastContact);
   };
 
-  const Row = ({ l }) => (
-    <tr style={{ borderBottom:`1px solid ${C.border}`, background: l.movedFromWarm ? "#fafafa" : "#fff" }}>
-      <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:100, backgroundColor: l.movedFromWarm ? "#fafafa" : "#fff" }}><EditCell value={l.name} onSave={(v) => onUpdate(l.id,"name",v)} /></td>
-      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:100 }}><EditCell value={l.role} onSave={(v) => onUpdate(l.id,"role",v)} /></td>
-      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:120 }}><EditCell value={l.company} onSave={(v) => onUpdate(l.id,"company",v)} /></td>
-      <td style={{ padding:"8px 10px", verticalAlign:"top" }}><Sel value={l.contact||"LinkedIn"} opts={VIA_OPTS} onChange={(v) => onUpdate(l.id,"contact",v)} /></td>
-      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:70 }}>
-        <EditCell value={l.linkedin||""} onSave={(v)=>onUpdate(l.id,"linkedin",v)} />
-        {l.linkedin && <a href={l.linkedin} target="_blank" rel="noreferrer" style={{ display:"block",fontSize:10,color:R,marginTop:2,textDecoration:"none",fontWeight:600 }}>↗ Open</a>}
-      </td>
-      <td style={{ padding:"8px 10px", verticalAlign:"top" }}><Sel value={l.tier||"A – Agency"} opts={TIER_OPTS} onChange={(v) => onUpdate(l.id,"tier",v)} /></td>
-      <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-        <Sel value={l.stage||"New"} opts={LEAD_STAGES} onChange={(v) => onUpdate(l.id,"stage",v)} />
-      </td>
-      <TC muted top>{l.dateAdded}</TC>
-      <td style={{ padding:"8px 10px", minWidth:200, verticalAlign:"top" }}>
-        <EditCell value={l.notes} onSave={(v) => onUpdate(l.id,"notes",v)} multi />
-        {l.movedFromWarm && (
-          <div style={{ marginTop:6, background:"#f7f7f7", border:`1px solid ${C.border}`, borderRadius:5, padding:"5px 8px" }}>
-            <div style={{ fontSize:9, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:2 }}>Archived from Warm Leads</div>
-            <div style={{ fontSize:10, color:C.text }}>{l.movedFromWarm.reason}</div>
-            <div style={{ fontSize:9, color:C.muted, marginTop:1 }}>
-              {l.movedFromWarm.date} · was {l.movedFromWarm.lastWarmStage}
-              {l.movedFromWarm.lastContact ? " · last contact " + l.movedFromWarm.lastContact : ""}
-            </div>
-            {l.movedFromWarm.lastAction && (
-              <div style={{ fontSize:9, color:C.muted, marginTop:1, fontStyle:"italic" }}>{l.movedFromWarm.lastAction}</div>
-            )}
-          </div>
-        )}
-      </td>
-      <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-        <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-          <button onClick={() => onPromote(l.id)} style={{ background:"#fff5f5", color:R, border:`1px solid ${R}`, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>
-            To Warm
+  const qFilter = (l) => !q || [(l.name||''),(l.company||''),(l.role||''),(l.notes||''),(l.email||'')]
+    .some(v=>v.toLowerCase().includes(q.toLowerCase()));
+
+  const sorted = [...rest].filter(qFilter).sort(sortFn);
+  const archivedFiltered = archived.filter(qFilter);
+
+  const stageCol = (s) => s==="Won"?"#10b981":s==="Reached out to me"?"#6366f1":s==="Replied"?"#f59e0b":C.muted;
+
+  const Row = ({ l, dim }) => {
+    const du = daysUntilNA(l.nextActionDate);
+    const dc = du!==null&&du<0 ? R : du!==null&&du<=3 ? R : du!==null&&du<=7 ? "#d97706" : C.muted;
+    const rowBg = dim ? "#fafafa" : l.starred ? "#fffbeb" : "#fff";
+    return (
+      <tr key={l.id} style={{ borderBottom:`1px solid ${C.border}`, background:rowBg, opacity:dim?0.6:1 }}>
+        {/* Star */}
+        <td style={{ padding:"8px 6px", textAlign:"center", verticalAlign:"top", width:28 }}>
+          <button onClick={()=>onUpdate(l.id,"starred",!l.starred)}
+            style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, lineHeight:1, padding:0, color:l.starred?"#f59e0b":C.border }}>
+            {l.starred?"★":"☆"}
           </button>
-          <DeleteBtn onDelete={() => onDelete(l.id)} />
-        </div>
-      </td>
-    </tr>
-  );
-
-  const THead = () => (
-    <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
-      {["NAME","ROLE","COMPANY","VIA","LI","TIER","STAGE","ADDED","NOTES / HISTORY",""].map((h,i) => <th key={i} className={i===0?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
-    </tr></thead>
-  );
-
-  return (
-    <div style={{ padding:"16px 20px" }}>
-      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, flexWrap:"wrap" }}>
-        <input type="text" placeholder="Search name, company, role..." value={q} onChange={(e) => setQ(e.target.value)}
-          style={{ border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 10px", fontSize:12, outline:"none", width:220, background:"#fff" }} />
-        <AddBtn label="Add Lead" onClick={onAdd} />
-        <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{leads.length} leads — {active.length} active · {archived.length} archived</span>
-      </div>
-
-      <div style={{ marginBottom:24 }}>
-        <SecHd label="Active" count={active.length} color={R} />
-        {active.length === 0 ? <div style={{ fontSize:12, color:C.muted, fontStyle:"italic", padding:"6px 0" }}>No active leads.</div> : (
-          <div style={{ overflowX:"auto" }}>
-            <table style={{ width:"100%", borderCollapse:"collapse", minWidth:900 }}>
-              <THead /><tbody>{active.map((l) => <Row key={l.id} l={l} />)}</tbody>
-            </table>
+        </td>
+        {/* Name */}
+        <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:140, backgroundColor:rowBg }}>
+          <EditCell value={l.name} onSave={v=>onUpdate(l.id,"name",v)} bold />
+          <div style={{ marginTop:3 }}>
+            <span style={{ fontSize:10, background:stageCol(l.stage)+"22", color:stageCol(l.stage), border:`1px solid ${stageCol(l.stage)}44`, borderRadius:4, padding:"1px 6px", fontWeight:600 }}>{l.stage||"Radar"}</span>
           </div>
-        )}
-      </div>
-
-      {archived.length > 0 && (
-        <div>
-          <SecHd label="Archived — Paused, Won, Cold" count={archived.length} color={C.muted} />
-          <div style={{ overflowX:"auto" }}>
-            <table style={{ width:"100%", borderCollapse:"collapse", minWidth:900 }}>
-              <THead /><tbody>{archived.map((l) => <Row key={l.id} l={l} />)}</tbody>
-            </table>
+        </td>
+        {/* Company */}
+        <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:130 }}>
+          <EditCell value={l.company} onSave={v=>onUpdate(l.id,"company",v)} />
+          <div style={{ fontSize:10, color:C.muted, marginTop:2 }}><EditCell value={l.role} onSave={v=>onUpdate(l.id,"role",v)} placeholder="Role" /></div>
+        </td>
+        {/* Stage selector */}
+        <td style={{ padding:"8px 10px", verticalAlign:"top", width:160 }}>
+          <Sel value={l.stage||"Radar"} opts={WARM_STAGES} onChange={v=>onStageChange(l.id,v)} cf={stageCol} />
+        </td>
+        {/* Last contact */}
+        <td style={{ padding:"8px 10px", verticalAlign:"top", width:110 }}>
+          <EditCell value={l.lastContact} onSave={v=>onUpdate(l.id,"lastContact",v)} placeholder="DD/MM/YY" />
+          {l.lastContact && <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{daysSince(l.lastContact)}d ago</div>}
+        </td>
+        {/* Next action */}
+        <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:180 }}>
+          <EditCell value={l.nextAction} onSave={v=>onUpdate(l.id,"nextAction",v)} multi placeholder="What needs doing..." />
+          <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:5, flexWrap:"wrap" }}>
+            {[3,7,14].map(n=>(
+              <button key={n} onClick={()=>onUpdate(l.id,"nextActionDate",plusDays(n))}
+                style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:4, padding:"2px 7px", cursor:"pointer", fontSize:10, fontWeight:600, color:C.muted }}>+{n}d</button>
+            ))}
+            {l.nextActionDate && <>
+              <span style={{ fontSize:10, color:du<0?R:du<=2?"#d97706":"#059669", fontWeight:600 }}>{du<0?`${Math.abs(du)}d overdue`:du===0?"today":`in ${du}d`}</span>
+              <button onClick={()=>onUpdate(l.id,"nextActionDate","")} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:C.muted, padding:0 }} title="Clear">×</button>
+            </>}
           </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ── Agencies Tab ──────────────────────────────────────────────────────────────
-const AgTab = ({ data, onUpdate, onAdd, onDelete, warm, leads }) => {
-  const AG_STOP = new Set(["amsterdam","netherlands","nederland","holland","de","van","het","the","and","en","bv","nv","ltd","inc"]);
-  const getLinked = (agencyName) => {
-    const norm = (agencyName || "").toLowerCase().trim();
-    if (!norm) return [];
-    const sigWords = norm.split(/[\s,./&+\-()]+/).filter(w => w.length > 2 && !AG_STOP.has(w));
-    return [...(warm||[]).map(c=>({...c,pool:"warm"})), ...(leads||[]).map(c=>({...c,pool:"leads"}))]
-      .filter(c => {
-        const co = (c.company||"").toLowerCase().trim();
-        if (!co) return false;
-        if (co === norm) return true;
-        if (co.includes(norm)) return true;
-        if (norm.length > 5 && norm.includes(co) && co.length > 4) return true;
-        if (!sigWords.length) return false;
-        const coWords = co.split(/[\s,./&+\-()]+/).filter(w => w.length > 2 && !AG_STOP.has(w));
-        return sigWords.some(w => coWords.includes(w));
-      });
+        </td>
+        {/* Notes */}
+        <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:160 }}>
+          <EditCell value={l.notes} onSave={v=>onUpdate(l.id,"notes",v)} multi placeholder="Notes..." />
+        </td>
+        {/* Actions */}
+        <td style={{ padding:"8px 10px", verticalAlign:"top", width:80 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+            <button onClick={()=>onArchive(l.id,"")} style={{ background:"#f1f5f9", color:"#475569", border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600 }}>Archive</button>
+            <DeleteBtn onDelete={()=>onDelete(l.id)} />
+          </div>
+        </td>
+      </tr>
+    );
   };
 
   return (
-  <div style={{ padding:"16px 20px" }}>
-    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
-      <AddBtn label="Add Agency" onClick={onAdd} />
-      <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{data.length} agencies</span>
-    </div>
-    <div className="mobile-scroll-hint">Swipe to see more →</div>
-    <div style={{ overflowX:"auto" }}>
-      <table style={{ width:"100%", borderCollapse:"collapse", minWidth:820 }}>
-        <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
-          {["AGENCY","CONTACT","EMAIL","LI","WEBSITE","LOCATION","PRIORITY","STATUS","NOTES","LEAD WITH",""].map((h,i) => <th key={i} className={i===0?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
-        </tr></thead>
-        <tbody>
-          {data.map((a) => (
-            <tr key={a.id} style={{ borderBottom:`1px solid ${C.border}` }}>
-              <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:140, backgroundColor:"#fff" }}><EditCell value={a.name} onSave={(v) => onUpdate(a.id,"name",v)} /></td>
-              <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={a.contact} onSave={(v) => onUpdate(a.id,"contact",v)} /></td>
-              <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top" }}>
-                {a.email ? <a href={"mailto:"+a.email} style={{ color:R, textDecoration:"none" }}>{a.email}</a> : <EditCell value={a.email} onSave={(v) => onUpdate(a.id,"email",v)} />}
-              </td>
-              <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:80 }}>
-                <EditCell value={a.linkedin||""} onSave={(v)=>onUpdate(a.id,"linkedin",v)} />
-                {a.linkedin && <a href={a.linkedin} target="_blank" rel="noreferrer" style={{ display:"block",fontSize:10,color:R,marginTop:2,textDecoration:"none",fontWeight:600 }}>↗ Open</a>}
-              </td>
-              <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top" }}>
-                {a.website ? <a href={a.website} target="_blank" rel="noreferrer" style={{ color:R, textDecoration:"none" }}>{a.website.replace("https://","")}</a> : <EditCell value={a.website} onSave={(v) => onUpdate(a.id,"website",v)} />}
-              </td>
-              <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={a.location} onSave={(v) => onUpdate(a.id,"location",v)} /></td>
-              <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={a.priority} onSave={(v) => onUpdate(a.id,"priority",v)} /></td>
-              <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-                <Sel value={a.status||"Find contact"} opts={["Find contact","Reached out","In Warm Leads","New Lead added","Prior client","Conversation","Won"]} onChange={(v) => onUpdate(a.id,"status",v)} />
-              </td>
-              <td style={{ padding:"8px 10px", minWidth:180, maxWidth:360, verticalAlign:"top", resize:"horizontal", overflow:"hidden" }}>
-                <EditCell value={a.notes} onSave={(v) => onUpdate(a.id,"notes",v)} multi />
-                {(() => {
-                  const linked = getLinked(a.name);
-                  if (!linked.length) return null;
-                  return (
-                    <div style={{ marginTop:8, padding:"6px 8px", background:"#f8f8f8", borderRadius:5, border:`1px solid ${C.border}` }}>
-                      <div style={{ fontSize:9, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4 }}>Contacts in CRM</div>
-                      {linked.map(c => (
-                        <div key={c.id} style={{ display:"flex", alignItems:"center", gap:5, marginBottom:2 }}>
-                          <span style={{ fontSize:10, fontWeight:600, color: c.pool==="warm" ? "#059669" : "#2563eb" }}>{c.name}</span>
-                          <span style={{ fontSize:9, color:C.muted }}>· {c.pool==="warm" ? `Warm · ${c.stage||""}` : `Leads · ${c.stage||""}`}</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </td>
-              <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:170 }}>
-                <EditCell value={a.pitchAngle||""} onSave={(v) => onUpdate(a.id,"pitchAngle",v)} multi />
-                {!a.pitchAngle && <div style={{ fontSize:10, color:C.muted+"88", fontStyle:"italic" }}>e.g. Lead with Adidas embed story</div>}
-              </td>
-              <td style={{ padding:"8px 10px", verticalAlign:"top" }}><DeleteBtn onDelete={() => onDelete(a.id)} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  );
-};
-
-// ── Brands Tab ────────────────────────────────────────────────────────────────
-const BrTab = ({ data, onUpdate, onAdd, onDelete }) => (
-  <div style={{ padding:"16px 20px" }}>
-    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
-      <AddBtn label="Add Brand" onClick={onAdd} />
-      <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{data.length} brands</span>
-    </div>
-    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))", gap:12 }}>
-      {data.map((b) => (
-        <div key={b.id} style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, padding:14 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
-            <div style={{ flex:1, minWidth:0 }}><EditCell value={b.brand} onSave={(v) => onUpdate(b.id,"brand",v)} /></div>
-            <DeleteBtn onDelete={() => onDelete(b.id)} />
-          </div>
-          <div style={{ fontSize:11, color:C.muted, marginBottom:2 }}>Contact: <EditCell value={b.contactToFind} onSave={(v) => onUpdate(b.id,"contactToFind",v)} /></div>
-          <div style={{ fontSize:11, color:C.muted, marginBottom:4 }}>Sector: <EditCell value={b.sector} onSave={(v) => onUpdate(b.id,"sector",v)} /></div>
-          <div style={{ marginBottom:8 }}>
-            <Sel value={b.status||"Cold"} opts={["Cold","Find contact","Via agency","Reached out","Conversation","Active","Won","In Warm Leads"]} onChange={(v) => onUpdate(b.id,"status",v)} />
-          </div>
-          <EditCell value={b.notes} onSave={(v) => onUpdate(b.id,"notes",v)} multi />
-          {b.warmIn==="Yes" && <div style={{ marginTop:8, display:"inline-block", background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", borderRadius:4, padding:"2px 6px", fontSize:10, fontWeight:600 }}>Warm contact</div>}
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
-// ── Crew Tab ──────────────────────────────────────────────────────────────────
-const ALL_SPECS = Object.keys(SPEC_COLORS);
-
-const WebsiteCell = ({ value, onSave }) => {
-  const [editing, setEditing] = useState(false);
-  const [v, setV] = useState(value || "");
-  useEffect(() => { setV(value || ""); }, [value]);
-  if (editing) return <input autoFocus value={v} onChange={(e) => setV(e.target.value)} onBlur={() => { onSave(v); setEditing(false); }} onKeyDown={(e) => { if (e.key==="Enter") { onSave(v); setEditing(false); } if (e.key==="Escape") { setV(value||""); setEditing(false); } }} placeholder="https://..." style={{ border:`1px solid ${C.border}`, borderRadius:4, padding:"3px 6px", fontSize:11, outline:"none", width:160, fontFamily:"inherit" }} />;
-  if (v) return (<div style={{ display:"flex", alignItems:"center", gap:6 }}><a href={v.startsWith("http") ? v : "https://"+v} target="_blank" rel="noreferrer" style={{ color:R, textDecoration:"none", fontSize:11, fontWeight:600 }}>Link ↗</a><button onClick={() => setEditing(true)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:C.muted, padding:0 }} title="Edit URL">✎</button></div>);
-  return <div onClick={() => setEditing(true)} style={{ cursor:"text", color:C.muted+"99", fontSize:11, fontStyle:"italic" }}>Add URL...</div>;
-};
-
-const CrewTab = ({ data, onUpdate, onAdd, onDelete }) => {
-  const [q, setQ] = useState("");
-  const [spec, setSpec] = useState("All");
-  const specs = ["All", ...Array.from(new Set(data.map((c) => c.specialty))).sort()];
-  const filtered = data.filter((c) => {
-    const ms = spec==="All" || c.specialty===spec;
-    const mq = !q || (c.name||"").toLowerCase().includes(q.toLowerCase()) || (c.specialty||"").toLowerCase().includes(q.toLowerCase()) || (c.location||"").toLowerCase().includes(q.toLowerCase()) || (c.notes||"").toLowerCase().includes(q.toLowerCase()) || (c.email||"").toLowerCase().includes(q.toLowerCase());
-    return ms && mq;
-  });
-  return (
     <div style={{ padding:"16px 20px" }}>
+      {/* Header */}
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, flexWrap:"wrap" }}>
-        <input type="text" placeholder="Search name, specialty, location..." value={q} onChange={(e) => setQ(e.target.value)}
-          style={{ border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 10px", fontSize:12, outline:"none", width:220, background:"#fff" }} />
-        <select value={spec} onChange={(e) => setSpec(e.target.value)} style={{ border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 10px", fontSize:12, outline:"none", background:"#fff" }}>
-          {specs.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <AddBtn label="Add to Rolodex" onClick={onAdd} />
-        <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{filtered.length} / {data.length}</span>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search contacts..." style={{ border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", fontSize:12, flex:1, minWidth:180, outline:"none" }} />
+        <span style={{ fontSize:11, color:C.muted }}>{rest.length} active{archived.length>0 &&
+          <button onClick={()=>setShowArchived(!showArchived)} style={{ marginLeft:8, background:"none", border:"none", cursor:"pointer", fontSize:11, color:showArchived?"#7c3aed":C.muted, textDecoration:"underline", padding:0 }}>
+            {showArchived?"Hide":"Show"} archived ({archived.length})
+          </button>
+        }</span>
+        <button onClick={()=>onAdd()} style={{ background:R, color:"#fff", border:"none", borderRadius:6, padding:"7px 14px", cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>+ Add</button>
       </div>
-      <div className="mobile-scroll-hint">Swipe to see more →</div>
+
+      {/* Won / active bookings pinned */}
+      {won.length>0 && (
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"#10b981", marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>✓ Active Bookings</div>
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>
+            <tbody>{won.map(l=><Row key={l.id} l={l} dim={false} />)}</tbody>
+          </table></div>
+        </div>
+      )}
+
+      {/* Main contact list */}
       <div style={{ overflowX:"auto" }}>
-        <table style={{ width:"100%", borderCollapse:"collapse", minWidth:760 }}>
-          <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
-            {["NAME","SPECIALTY","RATE","EMAIL","WEBSITE","LOCATION","NOTES",""].map((h,i) => <th key={i} className={i===0?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
+        <table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>
+          <thead><tr style={{ borderBottom:`2px solid ${C.border}`, background:"#fafafa" }}>
+            {["★","NAME + STAGE","COMPANY","STAGE","LAST CONTACT","NEXT ACTION","NOTES",""].map((h,i)=>(
+              <th key={i} className={i===1?"sticky-col-th":""} style={{...TH_STYLE, ...(i===0?{width:28}:{})}}>{h}</th>
+            ))}
           </tr></thead>
           <tbody>
-            {filtered.map((c) => {
-              const sc = SPEC_COLORS[c.specialty] || { bg:"#f3f4f6", col:"#374151" };
-              return (
-                <tr key={c.id} style={{ borderBottom:`1px solid ${C.border}` }}>
-                  <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:120, backgroundColor:"#fff" }}><EditCell value={c.name} onSave={(v) => onUpdate(c.id,"name",v)} /></td>
-                  <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-                    <Sel value={c.specialty||"Motion Design"} opts={ALL_SPECS} onChange={(v) => onUpdate(c.id,"specialty",v)} />
-                    <span style={{ background:sc.bg, color:sc.col, borderRadius:4, padding:"1px 5px", fontSize:9, fontWeight:600, display:"inline-block", marginTop:3 }}>{c.specialty}</span>
-                  </td>
-                  <td style={{ padding:"8px 10px", verticalAlign:"top" }}><div style={{ display:"flex", alignItems:"center", gap:3 }}><select value={c.currency||"€"} onChange={(e) => onUpdate(c.id,"currency",e.target.value)} style={{ border:"none", borderRadius:3, padding:"1px 2px", fontSize:12, background:"transparent", color:"#555", cursor:"pointer", outline:"none", width:20, appearance:"none", WebkitAppearance:"none", MozAppearance:"none" }}><option value="€">€</option><option value="£">£</option><option value="$">$</option></select><EditCell value={c.rate} onSave={(v) => onUpdate(c.id,"rate",v)} /></div></td>
-                  <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top", minWidth:160 }}>
-                    <EditCell value={c.email} onSave={(v) => onUpdate(c.id,"email",v)} />
-                    {c.email && (
-                      <button
-                        onClick={() => window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(c.email)}&su=${encodeURIComponent("Availability — " + (c.specialty||"") + " | Jeoff")}&body=${encodeURIComponent("Hi " + (c.name||"").split(" ")[0] + ",\n\n")}`, "gmail_compose", "width=660,height=560,resizable=yes,scrollbars=yes")}
-                        style={{ display:"inline-block", marginTop:4, background:"#fff5f5", color:R, border:`1px solid ${R}`, borderRadius:4, padding:"2px 7px", fontSize:9, fontWeight:700, cursor:"pointer" }}>
-                        ✉ Draft in Gmail
-                      </button>
-                    )}
-                  </td>
-                  <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top", minWidth:140 }}>
-                    <WebsiteCell value={c.website} onSave={(v) => onUpdate(c.id,"website",v)} />
-                  </td>                  <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={c.location} onSave={(v) => onUpdate(c.id,"location",v)} /></td>
-                  <td style={{ padding:"8px 10px", minWidth:200, verticalAlign:"top" }}><EditCell value={c.notes} onSave={(v) => onUpdate(c.id,"notes",v)} multi /></td>
-                  <td style={{ padding:"8px 10px", verticalAlign:"top" }}><DeleteBtn onDelete={() => onDelete(c.id)} /></td>
-                </tr>
-              );
-            })}
+            {sorted.length===0 && <tr><td colSpan={8} style={{ padding:20, textAlign:"center", color:C.muted, fontSize:12 }}>No contacts yet. Hit + Add to get started.</td></tr>}
+            {sorted.map(l=><Row key={l.id} l={l} dim={false} />)}
           </tbody>
         </table>
       </div>
+
+      {/* Archived section */}
+      {showArchived && archivedFiltered.length>0 && (
+        <div style={{ marginTop:20 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>Archived</div>
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.6 }}>
+            <tbody>{archivedFiltered.map(l=><Row key={l.id} l={l} dim={true} />)}</tbody>
+          </table></div>
+        </div>
+      )}
     </div>
   );
 };
