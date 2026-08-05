@@ -415,7 +415,12 @@ const GlobalSearch = ({ q, warm, newL, ag, br, crew, fl, ct, onGo }) => {
 };
 
 // ── Overview ──────────────────────────────────────────────────────────────────
-const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChange, onGoToWarm }) => {
+const Overview = ({ warm, newL, ag, br, fl, ct, pencils, onPencilChange, onGoToWarm }) => {
+  // Availability: latest Booking endDate
+  const parseDate = (s) => { if(!s)return null; const p=s.split('/'); if(p.length!==3)return null; return new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); };
+  const latestBooking = (pencils||[]).filter(p=>p.type==='Booking'&&p.endDate).sort((a,b)=>parseDate(b.endDate)-parseDate(a.endDate))[0];
+  const availFrom = latestBooking ? (() => { const d=parseDate(latestBooking.endDate); d.setDate(d.getDate()+1); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(2)}`; })() : null;
+  const availDays = latestBooking ? Math.ceil((parseDate(latestBooking.endDate)-new Date())/86400000) : -1;
   const upcoming = warm.filter((w) => { const d = daysUntil(w.nextActionDate); return d >= -3 && d <= 14; }).sort((a,b) => daysUntil(a.nextActionDate)-daysUntil(b.nextActionDate));
   const stale = warm.filter((w) => daysUntil(w.nextActionDate) < -7 && w.stage !== "Won" && w.stage !== "Archived");
   const staleAgencies = (ag||[]).filter(a => {
@@ -475,6 +480,19 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
   });
   return (
     <div style={{ padding:"16px 20px" }}>
+      {availFrom && (
+        <div style={{ display:"flex", alignItems:"center", gap:10, background:availDays<=14?"#fef3c7":availDays<=30?"#f0fdf4":"#f8fafc", border:`1px solid ${availDays<=14?"#fcd34d":availDays<=30?"#86efac":"#e2e8f0"}`, borderRadius:8, padding:"10px 16px", marginBottom:16 }}>
+          <span style={{ fontSize:18 }}>{availDays<=14?"🔴":availDays<=30?"🟠":"🟢"}</span>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:availDays<=14?R:availDays<=30?"#d97706":"#059669" }}>
+              {availDays<0?"Available now":`Available from ${availFrom}`}
+            </div>
+            <div style={{ fontSize:11, color:C.muted }}>
+              {latestBooking?.`${latestBooking.company||''}` && `Current booking: ${latestBooking.company} → ${latestBooking.endDate}`}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="stat-card-row" style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:20 }}>
         {[
           { label:"Pipeline", val:warm.filter((w) => w.stage!=="Archived").length, sub:`${warm.filter((w) => ["Had Call","Brief Pending","Proposal"].includes(w.stage)).length} in conversation` },
@@ -557,11 +575,16 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils: _pencils, onPencilChang
           {appliedJobs.length === 0 && <div style={{ fontSize:12, color:C.muted }}>No applications yet. Hit Applied on a job.</div>}
           {appliedJobs.map((j) => {
             const sc = j.status==="Conversation"||j.status==="Offer" ? "#059669" : j.status==="No Response" ? "#d97706" : j.status==="Passed"||j.status==="Rejected" ? C.muted : "#2563eb";
+            const appliedDaysAgo = j.appliedDate ? Math.floor((new Date()-(() => { const p=j.appliedDate.split('/'); return new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); })())/86400000) : null;
+            const isStale = appliedDaysAgo!==null && appliedDaysAgo>=14 && (j.status==="Applied"||j.status==="No Response");
             return (
               <div key={j.id} style={{ borderBottom:`1px solid ${C.border}`, paddingBottom:8, marginBottom:8 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:6 }}>
                   <div style={{ minWidth:0 }}>
-                    <div style={{ fontSize:12, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{j.company}</div>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <div style={{ fontSize:12, fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{j.company}</div>
+                      {isStale && <span style={{ fontSize:9, background:"#fef3c7", color:"#92400e", border:"1px solid #fcd34d", borderRadius:4, padding:"1px 5px", whiteSpace:"nowrap", flexShrink:0 }}>{appliedDaysAgo}d no reply</span>}
+                    </div>
                     <div style={{ fontSize:11, color:C.muted, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{j.role}</div>
                   </div>
                   <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3, flexShrink:0 }}>
@@ -1221,7 +1244,7 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose
         <Sel value={j.priority||"Medium"} opts={["High","Medium","Low"]} onChange={(v) => onUpdate(j.id,"priority",v)} cf={p => p==="High"?R:p==="Medium"?"#d97706":C.muted} />
       </td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
-        <Sel value={j.status||"New"} opts={["New","Researching","Applied","No Response","Conversation","Offer","Rejected","Closed"]} onChange={(v) => onUpdate(j.id,"status",v)} cf={jobCol} />
+        <Sel value={j.status||"New"} opts={["New","Researching","Applied","No Response","Conversation","Offer","Rejected","Closed"]} onChange={(v) => { onUpdate(j.id,"status",v); if(v==="Applied"&&!j.appliedDate){ const d=new Date(); onUpdate(j.id,"appliedDate",String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getFullYear()).slice(2)); } }} cf={jobCol} />
       </td>
       <td style={{ padding:"8px 10px", minWidth:180, maxWidth:360, verticalAlign:"top", resize:"horizontal", overflow:"hidden" }}><EditCell value={j.notes} onSave={(v) => onUpdate(j.id,"notes",v)} multi /></td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
