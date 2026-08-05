@@ -770,17 +770,20 @@ const TIER_OPTS = ["A – Agency","A – Studio","B – Brand","B – Agency","C
 
 const WarmRow = ({ l, onUpdate, onStageChange, onArchive, onDelete, stageCol, daysUntilNA, daysSince }) => {
   const du = daysUntilNA(l.nextActionDate);
-  const dc = du!==null&&du<0 ? R : du!==null&&du<=3 ? R : du!==null&&du<=7 ? "#d97706" : C.muted;
   const rowBg = l.starred ? "#fffbeb" : "#fff";
+  const duColor = du!==null && du<0 ? R : du!==null && du<=7 ? "#d97706" : "#059669";
   return (
-    <tr style={{ borderBottom:`1px solid ${C.border}`, background:rowBg }}>
+    <tr style={{ borderBottom:"1px solid "+C.border, background:rowBg }}>
       <td style={{ padding:"8px 6px", textAlign:"center", verticalAlign:"top", width:28 }}>
-        <button onClick={()=>onUpdate(l.id,"starred",!l.starred)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, lineHeight:1, padding:0, color:l.starred?"#f59e0b":C.border }}>{l.starred?"★":"☆"}</button>
+        <button onClick={()=>onUpdate(l.id,"starred",!l.starred)} title={l.starred?"Unstar":"Star"}
+          style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, lineHeight:1, padding:0, color:l.starred?"#f59e0b":"#d1d5db" }}>
+          {l.starred ? "★" : "☆"}
+        </button>
       </td>
       <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:140, backgroundColor:rowBg }}>
         <EditCell value={l.name} onSave={v=>onUpdate(l.id,"name",v)} bold />
         <div style={{ marginTop:3 }}>
-          <span style={{ fontSize:10, background:stageCol(l.stage)+"22", color:stageCol(l.stage), border:`1px solid ${stageCol(l.stage)}44`, borderRadius:4, padding:"1px 6px", fontWeight:600 }}>{l.stage||"Radar"}</span>
+          <span style={{ fontSize:10, color:stageCol(l.stage), border:"1px solid "+stageCol(l.stage), borderRadius:4, padding:"1px 6px", fontWeight:600 }}>{l.stage||"Radar"}</span>
         </div>
       </td>
       <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:120 }}>
@@ -798,12 +801,17 @@ const WarmRow = ({ l, onUpdate, onStageChange, onArchive, onDelete, stageCol, da
         <EditCell value={l.nextAction} onSave={v=>onUpdate(l.id,"nextAction",v)} multi placeholder="What needs doing..." />
         <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:5, flexWrap:"wrap" }}>
           {[3,7,14].map(n=>(
-            <button key={n} onClick={()=>onUpdate(l.id,"nextActionDate",plusDays(n))} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:4, padding:"2px 7px", cursor:"pointer", fontSize:10, fontWeight:600, color:C.muted }}>+{n}d</button>
+            <button key={n} onClick={()=>onUpdate(l.id,"nextActionDate",plusDays(n))}
+              style={{ background:"none", border:"1px solid "+C.border, borderRadius:4, padding:"2px 7px", cursor:"pointer", fontSize:10, fontWeight:600, color:C.muted }}>+{n}d</button>
           ))}
-          {l.nextActionDate && <>
-            <span style={{ fontSize:10, color:du<0?R:du<=2?"#d97706":"#059669", fontWeight:600 }}>{du<0?`${Math.abs(du)}d overdue`:du===0?"today":`in ${du}d`}</span>
-            <button onClick={()=>onUpdate(l.id,"nextActionDate","")} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:C.muted, padding:0 }} title="Clear">×</button>
-          </>}
+          {l.nextActionDate && (
+            <span style={{ fontSize:10, color:duColor, fontWeight:600 }}>
+              {du<0 ? (Math.abs(du)+"d overdue") : du===0 ? "today" : ("in "+du+"d")}
+            </span>
+          )}
+          {l.nextActionDate && (
+            <button onClick={()=>onUpdate(l.id,"nextActionDate","")} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:C.muted, padding:0 }}>×</button>
+          )}
         </div>
       </td>
       <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:160 }}>
@@ -811,7 +819,7 @@ const WarmRow = ({ l, onUpdate, onStageChange, onArchive, onDelete, stageCol, da
       </td>
       <td style={{ padding:"8px 10px", verticalAlign:"top", width:80 }}>
         <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-          <button onClick={()=>onArchive(l.id,"")} style={{ background:"#f1f5f9", color:"#475569", border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600 }}>Archive</button>
+          <button onClick={()=>onArchive(l.id,"")} style={{ background:"#f1f5f9", color:"#475569", border:"1px solid "+C.border, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600 }}>Archive</button>
           <DeleteBtn onDelete={()=>onDelete(l.id)} />
         </div>
       </td>
@@ -827,11 +835,11 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
   const won  = active.filter(l => l.stage === "Won");
   const rest = active.filter(l => l.stage !== "Won");
   const nowD = new Date();
-  const parseDT = (s) => { if(!s) return null; const p=s.split('/'); if(p.length!==3) return null; return new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); };
+  const parseDT = (ds) => { if(!ds) return null; const p=ds.split('/'); if(p.length!==3) return null; return new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); };
   const daysSince = (d) => { const dt=parseDT(d); return dt ? Math.floor((nowD-dt)/86400000) : 999; };
   const daysUntilNA = (d) => { const dt=parseDT(d); return dt ? Math.ceil((dt-nowD)/86400000) : null; };
-  const stageCol = (s) => s==="Won"?"#10b981":s==="Reached out to me"?"#6366f1":s==="Replied"?"#f59e0b":C.muted;
-  const qFilter = (l) => !q || [(l.name||''),(l.company||''),(l.role||''),(l.notes||''),(l.email||'')].some(v=>v.toLowerCase().includes(q.toLowerCase()));
+  const stageCol = (st) => st==="Won" ? "#10b981" : st==="Reached out to me" ? "#6366f1" : st==="Replied" ? "#f59e0b" : C.muted;
+  const qFilter = (l) => !q || [(l.name||""),(l.company||""),(l.role||""),(l.notes||""),(l.email||"")].some(v=>v.toLowerCase().includes(q.toLowerCase()));
   const sortFn = (a,b) => {
     if(!!b.starred !== !!a.starred) return b.starred ? 1 : -1;
     const aDue=daysUntilNA(a.nextActionDate), bDue=daysUntilNA(b.nextActionDate);
@@ -842,33 +850,48 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
   };
   const sorted = [...rest].filter(qFilter).sort(sortFn);
   const archivedFiltered = archived.filter(qFilter);
-  const rowProps = { onUpdate, onStageChange, onArchive, onDelete, stageCol, daysUntilNA, daysSince };
-  const TH = [{label:"★",w:28},{label:"NAME",w:140},{label:"COMPANY",w:120},{label:"STAGE",w:160},{label:"LAST CONTACT",w:110},{label:"NEXT ACTION",w:180},{label:"NOTES",w:160},{label:"",w:80}];
-  const thead = (<thead><tr style={{ borderBottom:`2px solid ${C.border}`, background:"#fafafa" }}>{TH.map((h,i)=><th key={i} className={i===1?"sticky-col-th":""} style={{...TH_STYLE,width:h.w}}>{h.label}</th>)}</tr></thead>);
+  const rp = { onUpdate, onStageChange, onArchive, onDelete, stageCol, daysUntilNA, daysSince };
+  const cols = ["★","NAME","COMPANY","STAGE","LAST CONTACT","NEXT ACTION","NOTES",""];
+  const Thead = () => (
+    <thead><tr style={{ borderBottom:"2px solid "+C.border, background:"#fafafa" }}>
+      {cols.map((h,i)=><th key={i} className={i===1?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
+    </tr></thead>
+  );
   return (
     <div style={{ padding:"16px 20px" }}>
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, flexWrap:"wrap" }}>
-        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search contacts..." style={{ border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", fontSize:12, flex:1, minWidth:180, outline:"none" }} />
-        <span style={{ fontSize:11, color:C.muted }}>{rest.length} active{archived.length>0 && <button onClick={()=>setShowArchived(!showArchived)} style={{ marginLeft:8, background:"none", border:"none", cursor:"pointer", fontSize:11, color:showArchived?"#7c3aed":C.muted, textDecoration:"underline", padding:0 }}>{showArchived?"Hide":"Show"} archived ({archived.length})</button>}</span>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search contacts..." style={{ border:"1px solid "+C.border, borderRadius:6, padding:"7px 12px", fontSize:12, flex:1, minWidth:180, outline:"none" }} />
+        <span style={{ fontSize:11, color:C.muted }}>
+          {rest.length} active
+          {archived.length>0 && (
+            <button onClick={()=>setShowArchived(!showArchived)} style={{ marginLeft:8, background:"none", border:"none", cursor:"pointer", fontSize:11, color:showArchived?"#7c3aed":C.muted, textDecoration:"underline", padding:0 }}>
+              {showArchived?"Hide":"Show"} archived ({archived.length})
+            </button>
+          )}
+        </span>
         <button onClick={()=>onAdd()} style={{ background:R, color:"#fff", border:"none", borderRadius:6, padding:"7px 14px", cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>+ Add</button>
       </div>
-      {won.length>0 && (<div style={{ marginBottom:16 }}>
-        <div style={{ fontSize:11, fontWeight:700, color:"#10b981", marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>✓ Active Bookings</div>
-        <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>{thead}<tbody>{won.map(l=><WarmRow key={l.id} l={l} {...rowProps} />)}</tbody></table></div>
-      </div>)}
+      {won.length>0 && (
+        <div style={{ marginBottom:16 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"#10b981", marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>✓ Active Bookings</div>
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}><Thead /><tbody>{won.map(l=><WarmRow key={l.id} l={l} {...rp} />)}</tbody></table></div>
+        </div>
+      )}
       <div style={{ overflowX:"auto" }}>
         <table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>
-          {thead}
+          <Thead />
           <tbody>
             {sorted.length===0 && <tr><td colSpan={8} style={{ padding:20, textAlign:"center", color:C.muted, fontSize:12 }}>No contacts. Hit + Add to start.</td></tr>}
-            {sorted.map(l=><WarmRow key={l.id} l={l} {...rowProps} />)}
+            {sorted.map(l=><WarmRow key={l.id} l={l} {...rp} />)}
           </tbody>
         </table>
       </div>
-      {showArchived && archivedFiltered.length>0 && (<div style={{ marginTop:20 }}>
-        <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>Archived</div>
-        <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.6 }}>{thead}<tbody>{archivedFiltered.map(l=><WarmRow key={l.id} l={l} {...rowProps} />)}</tbody></table></div>
-      </div>)}
+      {showArchived && archivedFiltered.length>0 && (
+        <div style={{ marginTop:20 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>Archived</div>
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.6 }}><Thead /><tbody>{archivedFiltered.map(l=><WarmRow key={l.id} l={l} {...rp} />)}</tbody></table></div>
+        </div>
+      )}
     </div>
   );
 };
