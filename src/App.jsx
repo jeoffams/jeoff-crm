@@ -768,23 +768,70 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, onPencilChange, onGoToW
 const WARM_STAGES = ["Radar","Reached out to me","Replied","Won","Archived"];
 const TIER_OPTS = ["A – Agency","A – Studio","B – Brand","B – Agency","C – Studio","C – Agency","Other"];
 
+const WarmRow = ({ l, onUpdate, onStageChange, onArchive, onDelete, stageCol, daysUntilNA, daysSince }) => {
+  const du = daysUntilNA(l.nextActionDate);
+  const dc = du!==null&&du<0 ? R : du!==null&&du<=3 ? R : du!==null&&du<=7 ? "#d97706" : C.muted;
+  const rowBg = l.starred ? "#fffbeb" : "#fff";
+  return (
+    <tr style={{ borderBottom:`1px solid ${C.border}`, background:rowBg }}>
+      <td style={{ padding:"8px 6px", textAlign:"center", verticalAlign:"top", width:28 }}>
+        <button onClick={()=>onUpdate(l.id,"starred",!l.starred)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, lineHeight:1, padding:0, color:l.starred?"#f59e0b":C.border }}>{l.starred?"★":"☆"}</button>
+      </td>
+      <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:140, backgroundColor:rowBg }}>
+        <EditCell value={l.name} onSave={v=>onUpdate(l.id,"name",v)} bold />
+        <div style={{ marginTop:3 }}>
+          <span style={{ fontSize:10, background:stageCol(l.stage)+"22", color:stageCol(l.stage), border:`1px solid ${stageCol(l.stage)}44`, borderRadius:4, padding:"1px 6px", fontWeight:600 }}>{l.stage||"Radar"}</span>
+        </div>
+      </td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:120 }}>
+        <EditCell value={l.company} onSave={v=>onUpdate(l.id,"company",v)} />
+        <div style={{ fontSize:10, color:C.muted, marginTop:2 }}><EditCell value={l.role} onSave={v=>onUpdate(l.id,"role",v)} placeholder="Role" /></div>
+      </td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", width:160 }}>
+        <Sel value={l.stage||"Radar"} opts={WARM_STAGES} onChange={v=>onStageChange(l.id,v)} cf={stageCol} />
+      </td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", width:110 }}>
+        <EditCell value={l.lastContact} onSave={v=>onUpdate(l.id,"lastContact",v)} placeholder="DD/MM/YY" />
+        {l.lastContact && <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{daysSince(l.lastContact)}d ago</div>}
+      </td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:180 }}>
+        <EditCell value={l.nextAction} onSave={v=>onUpdate(l.id,"nextAction",v)} multi placeholder="What needs doing..." />
+        <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:5, flexWrap:"wrap" }}>
+          {[3,7,14].map(n=>(
+            <button key={n} onClick={()=>onUpdate(l.id,"nextActionDate",plusDays(n))} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:4, padding:"2px 7px", cursor:"pointer", fontSize:10, fontWeight:600, color:C.muted }}>+{n}d</button>
+          ))}
+          {l.nextActionDate && <>
+            <span style={{ fontSize:10, color:du<0?R:du<=2?"#d97706":"#059669", fontWeight:600 }}>{du<0?`${Math.abs(du)}d overdue`:du===0?"today":`in ${du}d`}</span>
+            <button onClick={()=>onUpdate(l.id,"nextActionDate","")} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:C.muted, padding:0 }} title="Clear">×</button>
+          </>}
+        </div>
+      </td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:160 }}>
+        <EditCell value={l.notes} onSave={v=>onUpdate(l.id,"notes",v)} multi placeholder="Notes..." />
+      </td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", width:80 }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+          <button onClick={()=>onArchive(l.id,"")} style={{ background:"#f1f5f9", color:"#475569", border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600 }}>Archive</button>
+          <DeleteBtn onDelete={()=>onDelete(l.id)} />
+        </div>
+      </td>
+    </tr>
+  );
+};
+
 const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive }) => {
   const [q, setQ] = useState("");
   const [showArchived, setShowArchived] = useState(false);
-
-  const active  = leads.filter(l => l.stage !== "Archived");
+  const active   = leads.filter(l => l.stage !== "Archived");
   const archived = leads.filter(l => l.stage === "Archived");
-
-  // Won entries pinned at top (confirmed bookings)
   const won  = active.filter(l => l.stage === "Won");
   const rest = active.filter(l => l.stage !== "Won");
-
   const nowD = new Date();
   const parseDT = (s) => { if(!s) return null; const p=s.split('/'); if(p.length!==3) return null; return new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); };
   const daysSince = (d) => { const dt=parseDT(d); return dt ? Math.floor((nowD-dt)/86400000) : 999; };
   const daysUntilNA = (d) => { const dt=parseDT(d); return dt ? Math.ceil((dt-nowD)/86400000) : null; };
-
-  // Sort: starred → overdue next action → longest since last contact
+  const stageCol = (s) => s==="Won"?"#10b981":s==="Reached out to me"?"#6366f1":s==="Replied"?"#f59e0b":C.muted;
+  const qFilter = (l) => !q || [(l.name||''),(l.company||''),(l.role||''),(l.notes||''),(l.email||'')].some(v=>v.toLowerCase().includes(q.toLowerCase()));
   const sortFn = (a,b) => {
     if(!!b.starred !== !!a.starred) return b.starred ? 1 : -1;
     const aDue=daysUntilNA(a.nextActionDate), bDue=daysUntilNA(b.nextActionDate);
@@ -793,130 +840,40 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
     if(aOver&&bOver) return aDue-bDue;
     return daysSince(b.lastContact)-daysSince(a.lastContact);
   };
-
-  const qFilter = (l) => !q || [(l.name||''),(l.company||''),(l.role||''),(l.notes||''),(l.email||'')]
-    .some(v=>v.toLowerCase().includes(q.toLowerCase()));
-
   const sorted = [...rest].filter(qFilter).sort(sortFn);
   const archivedFiltered = archived.filter(qFilter);
-
-  const stageCol = (s) => s==="Won"?"#10b981":s==="Reached out to me"?"#6366f1":s==="Replied"?"#f59e0b":C.muted;
-
-  const Row = ({ l, dim }) => {
-    const du = daysUntilNA(l.nextActionDate);
-    const dc = du!==null&&du<0 ? R : du!==null&&du<=3 ? R : du!==null&&du<=7 ? "#d97706" : C.muted;
-    const rowBg = dim ? "#fafafa" : l.starred ? "#fffbeb" : "#fff";
-    return (
-      <tr key={l.id} style={{ borderBottom:`1px solid ${C.border}`, background:rowBg, opacity:dim?0.6:1 }}>
-        {/* Star */}
-        <td style={{ padding:"8px 6px", textAlign:"center", verticalAlign:"top", width:28 }}>
-          <button onClick={()=>onUpdate(l.id,"starred",!l.starred)}
-            style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, lineHeight:1, padding:0, color:l.starred?"#f59e0b":C.border }}>
-            {l.starred?"★":"☆"}
-          </button>
-        </td>
-        {/* Name */}
-        <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:140, backgroundColor:rowBg }}>
-          <EditCell value={l.name} onSave={v=>onUpdate(l.id,"name",v)} bold />
-          <div style={{ marginTop:3 }}>
-            <span style={{ fontSize:10, background:stageCol(l.stage)+"22", color:stageCol(l.stage), border:`1px solid ${stageCol(l.stage)}44`, borderRadius:4, padding:"1px 6px", fontWeight:600 }}>{l.stage||"Radar"}</span>
-          </div>
-        </td>
-        {/* Company */}
-        <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:130 }}>
-          <EditCell value={l.company} onSave={v=>onUpdate(l.id,"company",v)} />
-          <div style={{ fontSize:10, color:C.muted, marginTop:2 }}><EditCell value={l.role} onSave={v=>onUpdate(l.id,"role",v)} placeholder="Role" /></div>
-        </td>
-        {/* Stage selector */}
-        <td style={{ padding:"8px 10px", verticalAlign:"top", width:160 }}>
-          <Sel value={l.stage||"Radar"} opts={WARM_STAGES} onChange={v=>onStageChange(l.id,v)} cf={stageCol} />
-        </td>
-        {/* Last contact */}
-        <td style={{ padding:"8px 10px", verticalAlign:"top", width:110 }}>
-          <EditCell value={l.lastContact} onSave={v=>onUpdate(l.id,"lastContact",v)} placeholder="DD/MM/YY" />
-          {l.lastContact && <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{daysSince(l.lastContact)}d ago</div>}
-        </td>
-        {/* Next action */}
-        <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:180 }}>
-          <EditCell value={l.nextAction} onSave={v=>onUpdate(l.id,"nextAction",v)} multi placeholder="What needs doing..." />
-          <div style={{ display:"flex", alignItems:"center", gap:4, marginTop:5, flexWrap:"wrap" }}>
-            {[3,7,14].map(n=>(
-              <button key={n} onClick={()=>onUpdate(l.id,"nextActionDate",plusDays(n))}
-                style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:4, padding:"2px 7px", cursor:"pointer", fontSize:10, fontWeight:600, color:C.muted }}>+{n}d</button>
-            ))}
-            {l.nextActionDate && <>
-              <span style={{ fontSize:10, color:du<0?R:du<=2?"#d97706":"#059669", fontWeight:600 }}>{du<0?`${Math.abs(du)}d overdue`:du===0?"today":`in ${du}d`}</span>
-              <button onClick={()=>onUpdate(l.id,"nextActionDate","")} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:C.muted, padding:0 }} title="Clear">×</button>
-            </>}
-          </div>
-        </td>
-        {/* Notes */}
-        <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:160 }}>
-          <EditCell value={l.notes} onSave={v=>onUpdate(l.id,"notes",v)} multi placeholder="Notes..." />
-        </td>
-        {/* Actions */}
-        <td style={{ padding:"8px 10px", verticalAlign:"top", width:80 }}>
-          <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-            <button onClick={()=>onArchive(l.id,"")} style={{ background:"#f1f5f9", color:"#475569", border:`1px solid ${C.border}`, borderRadius:5, padding:"4px 8px", cursor:"pointer", fontSize:10, fontWeight:600 }}>Archive</button>
-            <DeleteBtn onDelete={()=>onDelete(l.id)} />
-          </div>
-        </td>
-      </tr>
-    );
-  };
-
+  const rowProps = { onUpdate, onStageChange, onArchive, onDelete, stageCol, daysUntilNA, daysSince };
+  const TH = [{label:"★",w:28},{label:"NAME",w:140},{label:"COMPANY",w:120},{label:"STAGE",w:160},{label:"LAST CONTACT",w:110},{label:"NEXT ACTION",w:180},{label:"NOTES",w:160},{label:"",w:80}];
+  const thead = (<thead><tr style={{ borderBottom:`2px solid ${C.border}`, background:"#fafafa" }}>{TH.map((h,i)=><th key={i} className={i===1?"sticky-col-th":""} style={{...TH_STYLE,width:h.w}}>{h.label}</th>)}</tr></thead>);
   return (
     <div style={{ padding:"16px 20px" }}>
-      {/* Header */}
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, flexWrap:"wrap" }}>
         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search contacts..." style={{ border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", fontSize:12, flex:1, minWidth:180, outline:"none" }} />
-        <span style={{ fontSize:11, color:C.muted }}>{rest.length} active{archived.length>0 &&
-          <button onClick={()=>setShowArchived(!showArchived)} style={{ marginLeft:8, background:"none", border:"none", cursor:"pointer", fontSize:11, color:showArchived?"#7c3aed":C.muted, textDecoration:"underline", padding:0 }}>
-            {showArchived?"Hide":"Show"} archived ({archived.length})
-          </button>
-        }</span>
+        <span style={{ fontSize:11, color:C.muted }}>{rest.length} active{archived.length>0 && <button onClick={()=>setShowArchived(!showArchived)} style={{ marginLeft:8, background:"none", border:"none", cursor:"pointer", fontSize:11, color:showArchived?"#7c3aed":C.muted, textDecoration:"underline", padding:0 }}>{showArchived?"Hide":"Show"} archived ({archived.length})</button>}</span>
         <button onClick={()=>onAdd()} style={{ background:R, color:"#fff", border:"none", borderRadius:6, padding:"7px 14px", cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>+ Add</button>
       </div>
-
-      {/* Won / active bookings pinned */}
-      {won.length>0 && (
-        <div style={{ marginBottom:16 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:"#10b981", marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>✓ Active Bookings</div>
-          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>
-            <tbody>{won.map(l=><Row key={l.id} l={l} dim={false} />)}</tbody>
-          </table></div>
-        </div>
-      )}
-
-      {/* Main contact list */}
+      {won.length>0 && (<div style={{ marginBottom:16 }}>
+        <div style={{ fontSize:11, fontWeight:700, color:"#10b981", marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>✓ Active Bookings</div>
+        <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>{thead}<tbody>{won.map(l=><WarmRow key={l.id} l={l} {...rowProps} />)}</tbody></table></div>
+      </div>)}
       <div style={{ overflowX:"auto" }}>
         <table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>
-          <thead><tr style={{ borderBottom:`2px solid ${C.border}`, background:"#fafafa" }}>
-            {["★","NAME + STAGE","COMPANY","STAGE","LAST CONTACT","NEXT ACTION","NOTES",""].map((h,i)=>(
-              <th key={i} className={i===1?"sticky-col-th":""} style={{...TH_STYLE, ...(i===0?{width:28}:{})}}>{h}</th>
-            ))}
-          </tr></thead>
+          {thead}
           <tbody>
-            {sorted.length===0 && <tr><td colSpan={8} style={{ padding:20, textAlign:"center", color:C.muted, fontSize:12 }}>No contacts yet. Hit + Add to get started.</td></tr>}
-            {sorted.map(l=><Row key={l.id} l={l} dim={false} />)}
+            {sorted.length===0 && <tr><td colSpan={8} style={{ padding:20, textAlign:"center", color:C.muted, fontSize:12 }}>No contacts. Hit + Add to start.</td></tr>}
+            {sorted.map(l=><WarmRow key={l.id} l={l} {...rowProps} />)}
           </tbody>
         </table>
       </div>
-
-      {/* Archived section */}
-      {showArchived && archivedFiltered.length>0 && (
-        <div style={{ marginTop:20 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>Archived</div>
-          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.6 }}>
-            <tbody>{archivedFiltered.map(l=><Row key={l.id} l={l} dim={true} />)}</tbody>
-          </table></div>
-        </div>
-      )}
+      {showArchived && archivedFiltered.length>0 && (<div style={{ marginTop:20 }}>
+        <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>Archived</div>
+        <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.6 }}>{thead}<tbody>{archivedFiltered.map(l=><WarmRow key={l.id} l={l} {...rowProps} />)}</tbody></table></div>
+      </div>)}
     </div>
   );
 };
 
-// ── Jobs Tab ──────────────────────────────────────────────────────────────────
+
 const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose, onDelete }) => {
   const active  = data.filter((j) => ["New","Researching"].includes(j.status||"New"));
   const applied = data.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
