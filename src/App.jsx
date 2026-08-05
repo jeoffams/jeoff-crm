@@ -768,6 +768,13 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, onPencilChange, onGoToW
 const WARM_STAGES = ["Radar","Reached out to me","Replied","Won","Archived"];
 const TIER_OPTS = ["A – Agency","A – Studio","B – Brand","B – Agency","C – Studio","C – Agency","Other"];
 
+const WARM_COLS = ["★","NAME","COMPANY","STAGE","LAST CONTACT","NEXT ACTION","NOTES",""];
+const WarmThead = () => (
+  <thead><tr style={{ borderBottom:"2px solid "+C.border, background:"#fafafa" }}>
+    {WARM_COLS.map((h,i)=><th key={i} className={i===1?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
+  </tr></thead>
+);
+
 const WarmRow = ({ l, onUpdate, onStageChange, onArchive, onDelete, stageCol, daysUntilNA, daysSince }) => {
   const du = daysUntilNA(l.nextActionDate);
   const rowBg = l.starred ? "#fffbeb" : "#fff";
@@ -851,12 +858,7 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
   const sorted = [...rest].filter(qFilter).sort(sortFn);
   const archivedFiltered = archived.filter(qFilter);
   const rp = { onUpdate, onStageChange, onArchive, onDelete, stageCol, daysUntilNA, daysSince };
-  const cols = ["★","NAME","COMPANY","STAGE","LAST CONTACT","NEXT ACTION","NOTES",""];
-  const Thead = () => (
-    <thead><tr style={{ borderBottom:"2px solid "+C.border, background:"#fafafa" }}>
-      {cols.map((h,i)=><th key={i} className={i===1?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
-    </tr></thead>
-  );
+
   return (
     <div style={{ padding:"16px 20px" }}>
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, flexWrap:"wrap" }}>
@@ -874,12 +876,12 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
       {won.length>0 && (
         <div style={{ marginBottom:16 }}>
           <div style={{ fontSize:11, fontWeight:700, color:"#10b981", marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>✓ Active Bookings</div>
-          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}><Thead /><tbody>{won.map(l=><WarmRow key={l.id} l={l} {...rp} />)}</tbody></table></div>
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}><WarmThead /><tbody>{won.map(l=><WarmRow key={l.id} l={l} {...rp} />)}</tbody></table></div>
         </div>
       )}
       <div style={{ overflowX:"auto" }}>
         <table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>
-          <Thead />
+          <WarmThead />
           <tbody>
             {sorted.length===0 && <tr><td colSpan={8} style={{ padding:20, textAlign:"center", color:C.muted, fontSize:12 }}>No contacts. Hit + Add to start.</td></tr>}
             {sorted.map(l=><WarmRow key={l.id} l={l} {...rp} />)}
@@ -889,7 +891,7 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
       {showArchived && archivedFiltered.length>0 && (
         <div style={{ marginTop:20 }}>
           <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:6, textTransform:"uppercase", letterSpacing:1 }}>Archived</div>
-          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.6 }}><Thead /><tbody>{archivedFiltered.map(l=><WarmRow key={l.id} l={l} {...rp} />)}</tbody></table></div>
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.6 }}><WarmThead /><tbody>{archivedFiltered.map(l=><WarmRow key={l.id} l={l} {...rp} />)}</tbody></table></div>
         </div>
       )}
     </div>
