@@ -898,6 +898,191 @@ const WarmTab = ({ leads, onUpdate, onStageChange, onAdd, onDelete, onArchive })
 };
 
 
+const AgTab = ({ data, onUpdate, onAdd, onDelete, warm, leads }) => {
+  const AG_STOP = new Set(["amsterdam","netherlands","nederland","holland","de","van","het","the","and","en","bv","nv","ltd","inc"]);
+  const getLinked = (agencyName) => {
+    const norm = (agencyName || "").toLowerCase().trim();
+    if (!norm) return [];
+    const sigWords = norm.split(/[\s,./&+\-()]+/).filter(w => w.length > 2 && !AG_STOP.has(w));
+    return [...(warm||[]).map(c=>({...c,pool:"warm"})), ...(leads||[]).map(c=>({...c,pool:"leads"}))]
+      .filter(c => {
+        const co = (c.company||"").toLowerCase().trim();
+        if (!co) return false;
+        if (co === norm) return true;
+        if (co.includes(norm)) return true;
+        if (norm.length > 5 && norm.includes(co) && co.length > 4) return true;
+        if (!sigWords.length) return false;
+        const coWords = co.split(/[\s,./&+\-()]+/).filter(w => w.length > 2 && !AG_STOP.has(w));
+        return sigWords.some(w => coWords.includes(w));
+      });
+  };
+
+  return (
+  <div style={{ padding:"16px 20px" }}>
+    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+      <AddBtn label="Add Agency" onClick={onAdd} />
+      <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{data.length} agencies</span>
+    </div>
+    <div className="mobile-scroll-hint">Swipe to see more →</div>
+    <div style={{ overflowX:"auto" }}>
+      <table style={{ width:"100%", borderCollapse:"collapse", minWidth:820 }}>
+        <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
+          {["AGENCY","CONTACT","EMAIL","LI","WEBSITE","LOCATION","PRIORITY","STATUS","NOTES","LEAD WITH",""].map((h,i) => <th key={i} className={i===0?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
+        </tr></thead>
+        <tbody>
+          {data.map((a) => (
+            <tr key={a.id} style={{ borderBottom:`1px solid ${C.border}` }}>
+              <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:140, backgroundColor:"#fff" }}><EditCell value={a.name} onSave={(v) => onUpdate(a.id,"name",v)} /></td>
+              <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={a.contact} onSave={(v) => onUpdate(a.id,"contact",v)} /></td>
+              <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top" }}>
+                {a.email ? <a href={"mailto:"+a.email} style={{ color:R, textDecoration:"none" }}>{a.email}</a> : <EditCell value={a.email} onSave={(v) => onUpdate(a.id,"email",v)} />}
+              </td>
+              <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:80 }}>
+                <EditCell value={a.linkedin||""} onSave={(v)=>onUpdate(a.id,"linkedin",v)} />
+                {a.linkedin && <a href={a.linkedin} target="_blank" rel="noreferrer" style={{ display:"block",fontSize:10,color:R,marginTop:2,textDecoration:"none",fontWeight:600 }}>↗ Open</a>}
+              </td>
+              <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top" }}>
+                {a.website ? <a href={a.website} target="_blank" rel="noreferrer" style={{ color:R, textDecoration:"none" }}>{a.website.replace("https://","")}</a> : <EditCell value={a.website} onSave={(v) => onUpdate(a.id,"website",v)} />}
+              </td>
+              <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={a.location} onSave={(v) => onUpdate(a.id,"location",v)} /></td>
+              <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={a.priority} onSave={(v) => onUpdate(a.id,"priority",v)} /></td>
+              <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
+                <Sel value={a.status||"Find contact"} opts={["Find contact","Reached out","In Warm Leads","New Lead added","Prior client","Conversation","Won"]} onChange={(v) => onUpdate(a.id,"status",v)} />
+              </td>
+              <td style={{ padding:"8px 10px", minWidth:180, maxWidth:360, verticalAlign:"top", resize:"horizontal", overflow:"hidden" }}>
+                <EditCell value={a.notes} onSave={(v) => onUpdate(a.id,"notes",v)} multi />
+                {(() => {
+                  const linked = getLinked(a.name);
+                  if (!linked.length) return null;
+                  return (
+                    <div style={{ marginTop:8, padding:"6px 8px", background:"#f8f8f8", borderRadius:5, border:`1px solid ${C.border}` }}>
+                      <div style={{ fontSize:9, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4 }}>Contacts in CRM</div>
+                      {linked.map(c => (
+                        <div key={c.id} style={{ display:"flex", alignItems:"center", gap:5, marginBottom:2 }}>
+                          <span style={{ fontSize:10, fontWeight:600, color: c.pool==="warm" ? "#059669" : "#2563eb" }}>{c.name}</span>
+                          <span style={{ fontSize:9, color:C.muted }}>· {c.pool==="warm" ? `Warm · ${c.stage||""}` : `Leads · ${c.stage||""}`}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </td>
+              <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:170 }}>
+                <EditCell value={a.pitchAngle||""} onSave={(v) => onUpdate(a.id,"pitchAngle",v)} multi />
+                {!a.pitchAngle && <div style={{ fontSize:10, color:C.muted+"88", fontStyle:"italic" }}>e.g. Lead with Adidas embed story</div>}
+              </td>
+              <td style={{ padding:"8px 10px", verticalAlign:"top" }}><DeleteBtn onDelete={() => onDelete(a.id)} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  );
+};
+
+// ── Brands Tab ────────────────────────────────────────────────────────────────
+const BrTab = ({ data, onUpdate, onAdd, onDelete }) => (
+  <div style={{ padding:"16px 20px" }}>
+    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+      <AddBtn label="Add Brand" onClick={onAdd} />
+      <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{data.length} brands</span>
+    </div>
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))", gap:12 }}>
+      {data.map((b) => (
+        <div key={b.id} style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, padding:14 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+            <div style={{ flex:1, minWidth:0 }}><EditCell value={b.brand} onSave={(v) => onUpdate(b.id,"brand",v)} /></div>
+            <DeleteBtn onDelete={() => onDelete(b.id)} />
+          </div>
+          <div style={{ fontSize:11, color:C.muted, marginBottom:2 }}>Contact: <EditCell value={b.contactToFind} onSave={(v) => onUpdate(b.id,"contactToFind",v)} /></div>
+          <div style={{ fontSize:11, color:C.muted, marginBottom:4 }}>Sector: <EditCell value={b.sector} onSave={(v) => onUpdate(b.id,"sector",v)} /></div>
+          <div style={{ marginBottom:8 }}>
+            <Sel value={b.status||"Cold"} opts={["Cold","Find contact","Via agency","Reached out","Conversation","Active","Won","In Warm Leads"]} onChange={(v) => onUpdate(b.id,"status",v)} />
+          </div>
+          <EditCell value={b.notes} onSave={(v) => onUpdate(b.id,"notes",v)} multi />
+          {b.warmIn==="Yes" && <div style={{ marginTop:8, display:"inline-block", background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", borderRadius:4, padding:"2px 6px", fontSize:10, fontWeight:600 }}>Warm contact</div>}
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// ── Crew Tab ──────────────────────────────────────────────────────────────────
+const ALL_SPECS = Object.keys(SPEC_COLORS);
+
+const WebsiteCell = ({ value, onSave }) => {
+  const [editing, setEditing] = useState(false);
+  const [v, setV] = useState(value || "");
+  useEffect(() => { setV(value || ""); }, [value]);
+  if (editing) return <input autoFocus value={v} onChange={(e) => setV(e.target.value)} onBlur={() => { onSave(v); setEditing(false); }} onKeyDown={(e) => { if (e.key==="Enter") { onSave(v); setEditing(false); } if (e.key==="Escape") { setV(value||""); setEditing(false); } }} placeholder="https://..." style={{ border:`1px solid ${C.border}`, borderRadius:4, padding:"3px 6px", fontSize:11, outline:"none", width:160, fontFamily:"inherit" }} />;
+  if (v) return (<div style={{ display:"flex", alignItems:"center", gap:6 }}><a href={v.startsWith("http") ? v : "https://"+v} target="_blank" rel="noreferrer" style={{ color:R, textDecoration:"none", fontSize:11, fontWeight:600 }}>Link ↗</a><button onClick={() => setEditing(true)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:C.muted, padding:0 }} title="Edit URL">✎</button></div>);
+  return <div onClick={() => setEditing(true)} style={{ cursor:"text", color:C.muted+"99", fontSize:11, fontStyle:"italic" }}>Add URL...</div>;
+};
+
+const CrewTab = ({ data, onUpdate, onAdd, onDelete }) => {
+  const [q, setQ] = useState("");
+  const [spec, setSpec] = useState("All");
+  const specs = ["All", ...Array.from(new Set(data.map((c) => c.specialty))).sort()];
+  const filtered = data.filter((c) => {
+    const ms = spec==="All" || c.specialty===spec;
+    const mq = !q || (c.name||"").toLowerCase().includes(q.toLowerCase()) || (c.specialty||"").toLowerCase().includes(q.toLowerCase()) || (c.location||"").toLowerCase().includes(q.toLowerCase()) || (c.notes||"").toLowerCase().includes(q.toLowerCase()) || (c.email||"").toLowerCase().includes(q.toLowerCase());
+    return ms && mq;
+  });
+  return (
+    <div style={{ padding:"16px 20px" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, flexWrap:"wrap" }}>
+        <input type="text" placeholder="Search name, specialty, location..." value={q} onChange={(e) => setQ(e.target.value)}
+          style={{ border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 10px", fontSize:12, outline:"none", width:220, background:"#fff" }} />
+        <select value={spec} onChange={(e) => setSpec(e.target.value)} style={{ border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 10px", fontSize:12, outline:"none", background:"#fff" }}>
+          {specs.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <AddBtn label="Add to Rolodex" onClick={onAdd} />
+        <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>{filtered.length} / {data.length}</span>
+      </div>
+      <div className="mobile-scroll-hint">Swipe to see more →</div>
+      <div style={{ overflowX:"auto" }}>
+        <table style={{ width:"100%", borderCollapse:"collapse", minWidth:760 }}>
+          <thead><tr style={{ borderBottom:`1px solid ${C.border}` }}>
+            {["NAME","SPECIALTY","RATE","EMAIL","WEBSITE","LOCATION","NOTES",""].map((h,i) => <th key={i} className={i===0?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
+          </tr></thead>
+          <tbody>
+            {filtered.map((c) => {
+              const sc = SPEC_COLORS[c.specialty] || { bg:"#f3f4f6", col:"#374151" };
+              return (
+                <tr key={c.id} style={{ borderBottom:`1px solid ${C.border}` }}>
+                  <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", minWidth:120, backgroundColor:"#fff" }}><EditCell value={c.name} onSave={(v) => onUpdate(c.id,"name",v)} /></td>
+                  <td style={{ padding:"8px 10px", verticalAlign:"top" }}>
+                    <Sel value={c.specialty||"Motion Design"} opts={ALL_SPECS} onChange={(v) => onUpdate(c.id,"specialty",v)} />
+                    <span style={{ background:sc.bg, color:sc.col, borderRadius:4, padding:"1px 5px", fontSize:9, fontWeight:600, display:"inline-block", marginTop:3 }}>{c.specialty}</span>
+                  </td>
+                  <td style={{ padding:"8px 10px", verticalAlign:"top" }}><div style={{ display:"flex", alignItems:"center", gap:3 }}><select value={c.currency||"€"} onChange={(e) => onUpdate(c.id,"currency",e.target.value)} style={{ border:"none", borderRadius:3, padding:"1px 2px", fontSize:12, background:"transparent", color:"#555", cursor:"pointer", outline:"none", width:20, appearance:"none", WebkitAppearance:"none", MozAppearance:"none" }}><option value="€">€</option><option value="£">£</option><option value="$">$</option></select><EditCell value={c.rate} onSave={(v) => onUpdate(c.id,"rate",v)} /></div></td>
+                  <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top", minWidth:160 }}>
+                    <EditCell value={c.email} onSave={(v) => onUpdate(c.id,"email",v)} />
+                    {c.email && (
+                      <button
+                        onClick={() => window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(c.email)}&su=${encodeURIComponent("Availability — " + (c.specialty||"") + " | Jeoff")}&body=${encodeURIComponent("Hi " + (c.name||"").split(" ")[0] + ",\n\n")}`, "gmail_compose", "width=660,height=560,resizable=yes,scrollbars=yes")}
+                        style={{ display:"inline-block", marginTop:4, background:"#fff5f5", color:R, border:`1px solid ${R}`, borderRadius:4, padding:"2px 7px", fontSize:9, fontWeight:700, cursor:"pointer" }}>
+                        ✉ Draft in Gmail
+                      </button>
+                    )}
+                  </td>
+                  <td style={{ padding:"8px 10px", fontSize:11, verticalAlign:"top", minWidth:140 }}>
+                    <WebsiteCell value={c.website} onSave={(v) => onUpdate(c.id,"website",v)} />
+                  </td>                  <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={c.location} onSave={(v) => onUpdate(c.id,"location",v)} /></td>
+                  <td style={{ padding:"8px 10px", minWidth:200, verticalAlign:"top" }}><EditCell value={c.notes} onSave={(v) => onUpdate(c.id,"notes",v)} multi /></td>
+                  <td style={{ padding:"8px 10px", verticalAlign:"top" }}><DeleteBtn onDelete={() => onDelete(c.id)} /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// ── Jobs Tab ──────────────────────────────────────────────────────────────────
 const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose, onDelete }) => {
   const active  = data.filter((j) => ["New","Researching"].includes(j.status||"New"));
   const applied = data.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
