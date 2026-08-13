@@ -1410,6 +1410,19 @@ export default function App() {
         }
         setFl(_baseFl); setCt(_baseCt);
         setLoadStatus("Ready.");
+        // One-time migration: move old blob rows to row-per-entry format
+        try {
+          const MK = ['jw','ja','jb','jcr','jf','jc','jpen'];
+          for (const k of MK) {
+            const {data:oldRow} = await supabase.from('crm_data').select('data').eq('key',k).maybeSingle();
+            if (oldRow?.data && Array.isArray(oldRow.data) && oldRow.data.length>0) {
+              console.log('Migrating '+k+': '+oldRow.data.length+' entries...');
+              await db.set(k, oldRow.data);
+              await supabase.from('crm_data').delete().eq('key',k);
+              console.log(k+' migrated.');
+            }
+          }
+        } catch(me){ console.warn('Migration skipped:', me.message); }
         // Load last sweep date from Supabase jsid
         try { const sidData = await db.get("jsid"); if(sidData) setSweepDate(sidData.id||sidData.date||null); } catch(e){}
         setAppReady(true);
@@ -1435,16 +1448,23 @@ export default function App() {
   }, []);
 
   const upd = useCallback((key, setter) => (id, field, val) => {
-    setter((prev) => { const next = prev.map((x) => x.id===id ? {...x,[field]:val} : x); db.set(key,next); return next; });
+    setter((prev) => {
+      const next = prev.map((x) => x.id===id ? {...x,[field]:val} : x);
+      const updated = next.find(x => x.id===id);
+      if (updated) db.upsert(key, updated);
+      return next;
+    });
   }, []);
 
   const add = useCallback((setter, key, template) => () => {
     const item = {...template, id:uid()};
-    setter((prev) => { const next = [item, ...prev]; db.set(key,next); return next; });
+    setter((prev) => [item, ...prev]);
+    db.upsert(key, item);
   }, []);
 
   const del = useCallback((key, setter) => (id) => {
-    setter((prev) => { const next = prev.filter((x) => x.id!==id); db.set(key,next); return next; });
+    setter((prev) => prev.filter((x) => x.id!==id));
+    db.remove(key, id);
   }, []);
 
   const updAgAndWarm=useCallback((id,field,val)=>{
