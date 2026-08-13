@@ -1649,19 +1649,36 @@ export default function App() {
                 const file=e.target.files[0]; if(!file) return; e.target.value='';
                 try {
                   const text=await file.text();
-                  const backup=JSON.parse(text);
-                  const date=backup.date||backup.timestamp?.slice(0,10)||'unknown date';
-                  const tables=Object.keys(backup.tables||{}).filter(k=>!k.startsWith('backup'));
-                  const counts=tables.map(k=>{ const v=backup.tables[k]; return k+': '+(Array.isArray(v)?v.length:1); }).join(', ');
-                  if(!window.confirm('Restore backup from '+date+'?\n\n'+counts+'\n\nThis will overwrite your current data. This cannot be undone.')) return;
-                  const ARRAY_KEYS=['jw','ja','jb','jcr','jf','jc','jpen'];
-                  for(const k of tables){
-                    const v=backup.tables[k];
-                    if(ARRAY_KEYS.includes(k)&&Array.isArray(v)){
-                      await db.set(k,v);
-                    } else if(k==='jsid'&&v){
-                      await db.set(k,v);
-                    }
+                  const parsed=JSON.parse(text);
+                  // Detect format: Backup format has .tables, Export format has .warmLeads etc.
+                  let tables={};
+                  let date='unknown date';
+                  if(parsed.tables){
+                    // Backup format
+                    tables=parsed.tables;
+                    date=parsed.date||parsed.timestamp?.slice(0,10)||date;
+                  } else if(parsed.warmLeads||parsed.agencies||parsed.freelanceJobs){
+                    // Export format — map to internal keys
+                    if(parsed.warmLeads) tables.jw=parsed.warmLeads;
+                    if(parsed.agencies) tables.ja=parsed.agencies;
+                    if(parsed.brands) tables.jb=parsed.brands;
+                    if(parsed.crew) tables.jcr=parsed.crew;
+                    if(parsed.freelanceJobs) tables.jf=parsed.freelanceJobs;
+                    if(parsed.contractJobs) tables.jc=parsed.contractJobs;
+                    date=parsed.exportDate||date;
+                  } else {
+                    alert('Unrecognised file format. Use a file downloaded from Backup or Export.');
+                    return;
+                  }
+                  const AK=['jw','ja','jb','jcr','jf','jc','jpen'];
+                  const valid=Object.keys(tables).filter(k=>AK.includes(k)||k==='jsid');
+                  const counts=valid.map(k=>{ const v=tables[k]; return k+': '+(Array.isArray(v)?v.length:1); }).join(', ');
+                  if(!valid.length){ alert('No recognisable data found in this file.'); return; }
+                  if(!window.confirm('Restore from '+date+'?\n\n'+counts+'\n\nThis will overwrite your current data. This cannot be undone.')) return;
+                  for(const k of valid){
+                    const v=tables[k];
+                    if(AK.includes(k)&&Array.isArray(v)) await db.set(k,v);
+                    else if(k==='jsid'&&v) await db.set(k,v);
                   }
                   alert('Restore complete. Reloading...');
                   window.location.reload();
