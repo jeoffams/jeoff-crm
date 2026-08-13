@@ -1643,6 +1643,31 @@ export default function App() {
           <button onClick={async()=>{ try{ const res=await fetch("/api/backup?secret=jeoff-backup-2026"); if(!res.ok){alert("Backup failed: "+res.status);return;} const blob=await res.blob(); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="jeoff-crm-backup-"+new Date().toISOString().slice(0,10)+".json"; a.click(); URL.revokeObjectURL(url); }catch(e){alert("Backup error: "+e.message);} }} title="Download database backup" style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 9px", cursor:"pointer", display:"flex", alignItems:"center" }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </button>
+            <label title="Restore from backup JSON" style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 9px", cursor:"pointer", display:"flex", alignItems:"center" }}>
+              <input type="file" accept=".json" style={{ display:"none" }} onChange={async(e)=>{
+                const file=e.target.files[0]; if(!file) return; e.target.value='';
+                try {
+                  const text=await file.text();
+                  const backup=JSON.parse(text);
+                  const date=backup.date||backup.timestamp?.slice(0,10)||'unknown date';
+                  const tables=Object.keys(backup.tables||{}).filter(k=>!k.startsWith('backup'));
+                  const counts=tables.map(k=>{ const v=backup.tables[k]; return k+': '+(Array.isArray(v)?v.length:1); }).join(', ');
+                  if(!window.confirm('Restore backup from '+date+'?\n\n'+counts+'\n\nThis will overwrite your current data. This cannot be undone.')) return;
+                  const ARRAY_KEYS=['jw','ja','jb','jcr','jf','jc','jpen'];
+                  for(const k of tables){
+                    const v=backup.tables[k];
+                    if(ARRAY_KEYS.includes(k)&&Array.isArray(v)){
+                      await db.set(k,v);
+                    } else if(k==='jsid'&&v){
+                      await db.set(k,v);
+                    }
+                  }
+                  alert('Restore complete. Reloading...');
+                  window.location.reload();
+                } catch(err){ alert('Restore failed: '+err.message); }
+              }} />
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </label>
             <button onClick={() => supabase.auth.signOut()} title="Lock CRM" style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 9px", cursor:"pointer", display:"flex", alignItems:"center" }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           </button>
