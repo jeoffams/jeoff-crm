@@ -1,11 +1,10 @@
 export const config = { runtime: "edge" };
 
-const SB_URL = process.env.SUPABASE_URL;
-const SB_KEY = process.env.SUPABASE_KEY;
+const SB_URL = process.env.SUPABASE_URL || "https://htvpviogkfddllpsihbz.supabase.co";
+const SB_KEY = process.env.SUPABASE_KEY || "sb_publishable_7Qjtm4tluK1-XlWgQ2Ve1g_4R-GUoPK";
 const BACKUP_SECRET = process.env.BACKUP_SECRET || "jeoff-backup-2026";
 
 export default async function handler(req) {
-  // Simple secret check to prevent abuse
   const url = new URL(req.url);
   const secret = url.searchParams.get("secret");
   if (secret !== BACKUP_SECRET) {
@@ -13,14 +12,17 @@ export default async function handler(req) {
   }
 
   try {
-    const res = await fetch(, {
-      headers: { apikey: SB_KEY, Authorization:  }
+    const endpoint = SB_URL + "/rest/v1/crm_data?select=*";
+    const authHeader = "Bearer " + SB_KEY;
+    const res = await fetch(endpoint, {
+      headers: { apikey: SB_KEY, Authorization: authHeader }
     });
     const data = await res.json();
 
+    const today = new Date().toISOString().slice(0, 10);
     const backup = {
       timestamp: new Date().toISOString(),
-      date: new Date().toLocaleDateString("nl-NL"),
+      date: today,
       tables: {},
       totalRows: data.length
     };
@@ -32,12 +34,12 @@ export default async function handler(req) {
       };
     });
 
-    // Return as downloadable JSON
+    const filename = "jeoff-crm-backup-" + today + ".json";
     return new Response(JSON.stringify(backup, null, 2), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
-        "Content-Disposition": 
+        "Content-Disposition": "attachment; filename=" + filename
       }
     });
   } catch (err) {
