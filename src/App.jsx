@@ -415,7 +415,14 @@ const GlobalSearch = ({ q, warm, newL, ag, br, crew, fl, ct, onGo }) => {
 };
 
 // ── Overview ──────────────────────────────────────────────────────────────────
-const Overview = ({ warm, newL, ag, br, fl, ct, pencils, onPencilChange, onGoToWarm }) => {
+const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, onPencilChange, onGoToWarm }) => {
+  // Sweep overdue check
+  const parseSweepDate = (sid) => { if(!sid) return null; const p=(sid.split("-")[0]||"").split("/"); if(p.length!==3) return null; return new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); };
+  const sweepDt = parseSweepDate(sweepDate);
+  const sweepDaysAgo = sweepDt ? Math.floor((new Date()-sweepDt)/86400000) : null;
+  const sweepOverdue = sweepDaysAgo!==null && sweepDaysAgo>=5;
+  // Backup helper
+  const runBackup = async () => { try { const res=await fetch("/api/backup?secret=jeoff-backup-2026"); if(!res.ok) return alert("Backup failed: "+res.status); const blob=await res.blob(); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="jeoff-crm-backup-"+new Date().toISOString().slice(0,10)+".json"; a.click(); URL.revokeObjectURL(url); } catch(e){ alert("Backup error: "+e.message); } };
   // Availability: latest Booking endDate
   const parseDate = (s) => { if(!s)return null; const p=s.split('/'); if(p.length!==3)return null; return new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); };
   const latestBooking = (pencils||[]).filter(p=>p.type==='Booking'&&p.endDate).sort((a,b)=>parseDate(b.endDate)-parseDate(a.endDate))[0];
@@ -479,6 +486,17 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, onPencilChange, onGoToW
   });
   return (
     <div style={{ padding:"16px 20px" }}>
+      {sweepOverdue && (
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, background:"#fef3c7", border:"1px solid #fcd34d", borderRadius:8, padding:"10px 16px", marginBottom:8 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:16 }}>⏰</span>
+            <div>
+              <div style={{ fontSize:12, fontWeight:700, color:"#92400e" }}>Sweep overdue — {sweepDaysAgo} days since last run</div>
+              <div style={{ fontSize:11, color:"#b45309" }}>Type "Run sweep" in Claude to update your jobs</div>
+            </div>
+          </div>
+        </div>
+      )}
       {availFrom && (
         <div style={{ display:"flex", alignItems:"center", gap:10, background:availDays<=14?"#fef3c7":availDays<=30?"#f0fdf4":"#f8fafc", border:`1px solid ${availDays<=14?"#fcd34d":availDays<=30?"#86efac":"#e2e8f0"}`, borderRadius:8, padding:"10px 16px", marginBottom:16 }}>
           <span style={{ fontSize:18 }}>{availDays<=14?"🔴":availDays<=30?"🟠":"🟢"}</span>
@@ -492,6 +510,11 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, onPencilChange, onGoToW
           </div>
         </div>
       )}
+      <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
+        <button onClick={runBackup} title="Download full database backup as JSON" style={{ background:"none", border:"1px solid "+C.border, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:10, color:C.muted, display:"flex", alignItems:"center", gap:4 }}>
+          💾 Backup
+        </button>
+      </div>
       <div className="stat-card-row" style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:20 }}>
         {[
           { label:"Pipeline", val:warm.filter((w) => w.stage!=="Archived").length, sub:`${warm.filter((w) => ["Had Call","Brief Pending","Proposal"].includes(w.stage)).length} in conversation` },
@@ -1083,7 +1106,7 @@ const CrewTab = ({ data, onUpdate, onAdd, onDelete }) => {
 };
 
 // ── Jobs Tab ──────────────────────────────────────────────────────────────────
-const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose, onDelete }) => {
+const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose, onDelete, warmLeads }) => {
   const active  = data.filter((j) => ["New","Researching"].includes(j.status||"New"));
   const applied = data.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
   const passed  = data.filter((j) => j.status === "Passed");
@@ -1093,12 +1116,13 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose
       {["COMPANY","ROLE","LOCATION","SECTOR","PRIORITY","STATUS","NOTES","SOURCE","SWEPT","APPLIED",""].map((h,i) => <th key={i} className={i===0?"sticky-col-th":""} style={TH_STYLE}>{h}</th>)}
     </tr></thead>
   );
-  const JobRow = ({ j }) => (
+  const JobRow = ({ j, warmLeads }) => (
     <tr style={{ borderBottom:`1px solid ${C.border}`, background: j.isNew ? "#fff9f8" : "#fff" }}>
       <td className="sticky-col-td" style={{ padding:"8px 10px", verticalAlign:"top", backgroundColor: j.isNew ? "#fff9f8" : "#fff" }}>
         <div style={{ display:"flex", alignItems:"center", gap:5 }}>
           {j.isNew && <span style={{ background:R, color:"#fff", borderRadius:4, padding:"1px 4px", fontSize:9, fontWeight:700 }}>NEW</span>}
           <EditCell value={j.company||""} onSave={(v) => onUpdate(j.id,"company",v)} />
+          {(()=>{ const wm=(warmLeads||[]).find(w=>{ if(w.stage==="Won"||w.stage==="Archived") return false; const wc=(w.company||"").toLowerCase().replace(/[^a-z0-9]/g,""); const jc=(j.company||"").toLowerCase().replace(/[^a-z0-9]/g,""); return wc.length>3&&jc.length>3&&(wc.includes(jc.slice(0,6))||jc.includes(wc.slice(0,6))); }); return wm?(<div style={{ marginTop:3, fontSize:9, color:"#059669", fontWeight:700 }}>⚡ {wm.name} · {wm.stage}</div>):null; })()}
         </div>
       </td>
       <td style={{ padding:"8px 10px", verticalAlign:"top" }}><EditCell value={j.role||""} onSave={(v) => onUpdate(j.id,"role",v)} /></td>
@@ -1145,25 +1169,25 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose
       <div style={{ marginBottom:20 }}>
         <SecHd label="Active — New and Researching" count={active.length} color={R} />
         {active.length===0 ? <div style={{ fontSize:12, color:C.muted, fontStyle:"italic", padding:"8px 0" }}>No active jobs. Run a Sweep to find new opportunities.</div> : (
-          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}><THead /><tbody>{active.map((j) => <JobRow key={j.id} j={j} />)}</tbody></table></div>
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}><THead /><tbody>{active.map((j) => <JobRow key={j.id} j={j} warmLeads={warmLeads} />)}</tbody></table></div>
         )}
       </div>
       <div style={{ marginBottom:20 }}>
         <SecHd label="Applied and Responded" count={applied.length} color={C.muted} />
         {applied.length===0 ? <div style={{ fontSize:12, color:C.muted, fontStyle:"italic", padding:"8px 0" }}>No applied jobs yet.</div> : (
-          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}><THead /><tbody>{applied.map((j) => <JobRow key={j.id} j={j} />)}</tbody></table></div>
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}><THead /><tbody>{applied.map((j) => <JobRow key={j.id} j={j} warmLeads={warmLeads} />)}</tbody></table></div>
         )}
       </div>
       {passed.length > 0 && (
         <div>
           <SecHd label="Passed — Decided Not to Apply" count={passed.length} color={C.muted} />
-          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.65 }}><THead /><tbody>{passed.map((j) => <JobRow key={j.id} j={j} />)}</tbody></table></div>
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.65 }}><THead /><tbody>{passed.map((j) => <JobRow key={j.id} j={j} warmLeads={warmLeads} />)}</tbody></table></div>
         </div>
       )}
       {closed.length > 0 && (
         <div>
           <SecHd label="Closed — Heard Back" count={closed.length} color="#7c3aed" />
-          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.65 }}><THead /><tbody>{closed.map((j) => <JobRow key={j.id} j={j} />)}</tbody></table></div>
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860, opacity:0.65 }}><THead /><tbody>{closed.map((j) => <JobRow key={j.id} j={j} warmLeads={warmLeads} />)}</tbody></table></div>
         </div>
       )}
     </div>
@@ -1235,6 +1259,7 @@ export default function App() {
   const [fl, setFl]       = useState([]);
   const [ct, setCt]       = useState([]);
   const [pencils, setPencils] = useState([]);
+  const [sweepDate, setSweepDate] = useState(null);
   const [crew, setCrew]   = useState(SCr);
   const [tab, setTab]     = useState("overview");
   const [msg, setMsg]     = useState(null);
@@ -1385,6 +1410,8 @@ export default function App() {
         }
         setFl(_baseFl); setCt(_baseCt);
         setLoadStatus("Ready.");
+        // Load last sweep date from Supabase jsid
+        try { const sidData = await db.get("jsid"); if(sidData) setSweepDate(sidData.id||sidData.date||null); } catch(e){}
         setAppReady(true);
       } catch(e) { console.error(e); setAppReady(true); }
     })();
@@ -1624,7 +1651,7 @@ export default function App() {
 
       {/* Content */}
       <div className="content-wrap" style={{ maxWidth:1600, margin:"0 auto", paddingTop:20 }}>
-        {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} pencils={pencils} onPencilChange={(p)=>{ setPencils(p); db.set("jpen",p); }} onGoToWarm={()=>setTab("warm")} />}
+        {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} pencils={pencils} sweepDate={sweepDate} onPencilChange={(p)=>{ setPencils(p); db.set("jpen",p); }} onGoToWarm={()=>setTab("warm")} />}
         {tab==="warm"      && <WarmTab leads={warm} onUpdate={upd("jw",setWarm)} onStageChange={warmStageChange} onAdd={add(setWarm,"jw",{name:"",role:"",company:"",email:"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"",notes:""})} onDelete={del("jw",setWarm)} onArchive={archiveToLeads} />}
         
         {tab==="agencies"  && <AgTab   data={ag}    onUpdate={updAgAndWarm}   onAdd={(extra={}) => {
@@ -1658,8 +1685,8 @@ export default function App() {
               }
             }} onDelete={del("jb",setBr)} />}
         {tab==="crew"      && <CrewTab data={crew}  onUpdate={upd("jcr",setCrew)} onAdd={add(setCrew,"jcr",{name:"",specialty:"Motion Design",rate:"",email:"",website:"",location:"Amsterdam",notes:""})} onDelete={del("jcr",setCrew)} />}
-        {tab==="freelance" && <JobsTab data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} onClose={closeJob("jf",setFl)} onDelete={del("jf",setFl)} />}
-        {tab==="contract"  && <JobsTab data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} onClose={closeJob("jc",setCt)} onDelete={del("jc",setCt)} />}
+        {tab==="freelance" && <JobsTab warmLeads={warm} data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} onClose={closeJob("jf",setFl)} onDelete={del("jf",setFl)} />}
+        {tab==="contract"  && <JobsTab warmLeads={warm} data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} onClose={closeJob("jc",setCt)} onDelete={del("jc",setCt)} />}
       </div>
 
 
