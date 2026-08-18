@@ -17,7 +17,10 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 // ── Sweep ─────────────────────────────────────────────────────────────────────
 // SWEEP INSTRUCTIONS (for Claude when "Run Sweep" is typed in chat):
 // ─── 1. LINKEDIN JOBS — Amsterdam (all types, past week) ────────────────────────
-//    URL: https://linkedin.com/jobs/search/?keywords=[term]&geoId=102011674&f_TPR=r604800&sortBy=DD
+//    URL: https://linkedin.com/jobs/search/?keywords=[term]&location=Amsterdam%2C+North+Holland%2C+Netherlands&geoId=102011674&f_TPR=r604800&sortBy=DD
+//    IMPORTANT: LinkedIn now redirects keyword-only searches via AI mode (shows German/irrelevant results).
+//    Always include BOTH location= AND geoId= parameters together to bypass the AI redirect.
+//    Verified working format: ?keywords=X&location=Amsterdam%2C+North+Holland%2C+Netherlands&geoId=102011674&f_TPR=r604800&sortBy=DD
 //    Batch A — Production: "creative producer", "executive producer", "content producer", "producent",
 //             "VFX producer", "senior producer", "freelance producer", "AI producer", "AI creative producer"
 //    Batch B — Creative Ops: "creative operations manager", "creative ops", "creative operations",
