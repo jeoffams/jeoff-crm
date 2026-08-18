@@ -21,16 +21,23 @@ const contactHeat = (lc) => { if (!lc) return "#fff5f5"; const d = daysSince(lc)
 //    IMPORTANT: LinkedIn now redirects keyword-only searches via AI mode (shows German/irrelevant results).
 //    Always include BOTH location= AND geoId= parameters together to bypass the AI redirect.
 //    Verified working format: ?keywords=X&location=Amsterdam%2C+North+Holland%2C+Netherlands&geoId=102011674&f_TPR=r604800&sortBy=DD
-//    Batch A — Production: "creative producer", "executive producer", "content producer", "producent",
-//             "VFX producer", "senior producer", "freelance producer", "AI producer", "AI creative producer"
-//    Batch B — Creative Ops: "creative operations manager", "creative ops", "creative operations",
-//             "creative services manager", "creative project manager", "head of creative operations"
-//    Batch C — PM/Production: "project manager productie", "production manager", "campaign manager",
-//             "head of production", "creative project manager", "generative AI producer"
+//    CRITICAL: Always include BOTH location= AND geoId= to bypass LinkedIn AI search redirect.
+//    Verified URL format:
+//    https://linkedin.com/jobs/search/?keywords=[term]&location=Amsterdam%2C+North+Holland%2C+Netherlands&geoId=102011674&f_TPR=r604800&sortBy=DD
+//
+//    Batch A — Production titles:
+//      keywords: "creative producer" OR "senior producer" OR "executive producer" OR "producent" OR "AI producer"
+//    Batch B — Creative ops + PM titles (add f_JT=C%2CF for contract/freelance):
+//      keywords: "creative operations" OR "creative project manager" OR "head of production" OR "production manager"
+//    Batch C — Branded content + VFX:
+//      keywords: "branded content producer" OR "VFX producer" OR "freelance producer" OR "in2content" OR "noow"
 // ─── 2. LINKEDIN JOBS — Remote (Benelux + UK + DE, contract/freelance only) ──────
 //    Add: &f_WT=2 (remote) + &f_JT=C%2CF (contract/freelance)
 //    NL: geoId=102890719 | BE: geoId=100565514 | UK: geoId=101165590 | DE: geoId=101282230
 //    ALL FOUR must be run every sweep. Same keywords as Batch A+B above.
+//    Remote URL format: ?keywords=[term]&location=[country]&geoId=[id]&f_TPR=r604800&f_WT=2&f_JT=C%2CF&sortBy=DD
+//    NL geoId=102890719 | BE geoId=100565514 | UK geoId=101165590 | DE geoId=101282230
+//    Also include location= param: e.g. location=Netherlands&geoId=102890719
 // ─── 3. LINKEDIN POSTS — Contextual brief signals (report in chat, NOT saved to CRM) ───────────
 //    URL: https://linkedin.com/search/results/content/?keywords=[term]&datePosted=past-week&sortBy=date_posted
 //    Navigate, wait 5s, read innerText, report any relevant posts directly in chat.
