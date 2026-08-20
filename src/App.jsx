@@ -1651,9 +1651,9 @@ export default function App() {
         </div>
 
         <div className="header-actions" style={{ display:"flex", alignItems:"center", gap:12 }}>
-          {msg && (
+          {msg && sessionStorage.getItem('msg_dismissed') !== msg && (
             <div style={{ background:"#f0fdf4", color:"#16a34a", border:"1px solid #bbf7d0", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
-              {msg}<button onClick={() => setMsg(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"#16a34a", fontSize:14, lineHeight:1, padding:0 }}>x</button>
+              {msg}<button onClick={() => () => { sessionStorage.setItem('msg_dismissed', msg); setMsg(null); }} style={{ background:"none", border:"none", cursor:"pointer", color:"#16a34a", fontSize:14, lineHeight:1, padding:0 }}>x</button>
             </div>
           )}
           <button onClick={async()=>{ try{ const res=await fetch("/api/backup?secret=jeoff-backup-2026"); if(!res.ok){alert("Backup failed: "+res.status);return;} const blob=await res.blob(); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="jeoff-crm-backup-"+new Date().toISOString().slice(0,10)+".json"; a.click(); URL.revokeObjectURL(url); }catch(e){alert("Backup error: "+e.message);} }} title="Download database backup" style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", cursor:"pointer", fontSize:11, fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
