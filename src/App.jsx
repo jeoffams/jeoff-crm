@@ -455,6 +455,12 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, onPencilChan
   const newJobs = fl.filter((j) => j.isNew).length + ct.filter((j) => j.isNew).length;
   const curYear = new Date().getFullYear();
   const realPencils = pencils.filter(p=>!p.__sentinel);
+  const parsePenDate = (s) => {
+    if(!s) return new Date(9999,0,1);
+    const p=s.split('/');
+    if(p.length===3) return new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+    return new Date(9999,0,1);
+  };
   const shownYears = Array.from(new Set(pencils.map(p=>p.year||curYear))).sort((a,b)=>b-a);
   const handleNewYear = () => { const maxY=shownYears.length?Math.max(...shownYears):curYear; const newY=maxY+1; if(shownYears.includes(newY))return; onPencilChange&&onPencilChange([...pencils,{id:'__y'+newY,__sentinel:true,year:newY}]); };
   const [addingForYear, setAddingForYear] = useState(null);
@@ -656,7 +662,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, onPencilChan
           <button onClick={handleNewYear} style={{ background:"none", color:R, border:`1px solid ${R}`, borderRadius:5, padding:"4px 10px", cursor:"pointer", fontSize:11, fontWeight:700 }}>+ New Year</button>
         </div>
         {shownYears.map(yr => {
-          const yrEntries = realPencils.filter(p=>(p.year||curYear)===yr);
+          const yrEntries = realPencils.filter(p=>(p.year||curYear)===yr).sort((a,b)=>parsePenDate(a.startDate)-parsePenDate(b.startDate));
           const tl = yearTimelines[yr]||{};
           const tPct_y=tl.pct, tBar_y=tl.bar, tMonths_y=tl.months||[], tNow_y=tl.tn||new Date();
           return (
