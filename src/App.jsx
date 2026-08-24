@@ -1208,6 +1208,120 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose
 
 
 // ── Login Screen ────────────────────────────────────────────────────────────────────────────
+// ── TON SWEEP INSTRUCTIONS ────────────────────────────────────────────────────
+// Triggered by "Run Ton Sweep" in chat. Zoekt voor Ton van Overveld (broer van Jeoff).
+// Ton: Transportplanner 20+ jaar ervaring autotransport/distributie, woont Oosterhout (4904 XK)
+//
+// CRITERIA:
+//   - Max 30 min rijden vanaf Oosterhout — check altijd rijafstand
+//   - Salaris: €4.500 bruto/maand (~€54.000/jaar), vast dienstverband
+//   - Voorkeur: fulltime (f_JT=F), maar parttime bespreekbaar
+//   - Sector: transport, logistiek, distributie, automotive, fleet
+//
+// GEZOCHTE FUNCTIES (gebruik combinaties):
+//   Batch A: transportplanner OR "planner autotransport" OR "service planner" OR personeelsplanner
+//   Batch B: "logistiek planner" OR "fleet planner" OR distributieplanner OR wagenparkbeheerder
+//   Batch C: planner transport OR "planning coordinator" OR "transport coordinator"
+//
+// LOCATIES (gebruik altijd location= + geoId= om AI redirect te omzeilen):
+//   Breda:    location=Breda%2C+Noord-Brabant%2C+Netherlands&geoId=104929178
+//   Tilburg:  location=Tilburg%2C+Noord-Brabant%2C+Netherlands&geoId=102648087
+//   Roosendaal: location=Roosendaal%2C+Noord-Brabant%2C+Netherlands&geoId=102617154
+//   Dordrecht: location=Dordrecht%2C+Zuid-Holland%2C+Netherlands&geoId=102052649
+//   Waalwijk: zoek ook in Waalwijk (Midden-Brabant)
+//   Also try: geoId=102902977 (Noord-Brabant province) for broader search
+//
+// SKIP: Amsterdam, Rotterdam city center, >40km van Oosterhout, junior, stage, ZZP-only
+//
+// URL TEMPLATE:
+//   https://linkedin.com/jobs/search/?keywords=[term]&location=Breda%2C+Noord-Brabant%2C+Netherlands&geoId=104929178&f_TPR=r2592000&f_JT=F&sortBy=DD
+//   (f_TPR=r2592000 = afgelopen 4 weken, f_JT=F = fulltime)
+//
+// SCHRIJF naar Supabase: key prefix 'jton_entry_{id}', isNew:true
+// RAPPORTEER in chat: bedrijf, functie, locatie, rijafstand vanaf Oosterhout, salaris indien vermeld
+// ────────────────────────────────────────────────────────────────────────────────
+
+const STATUSSEN_TON = ['Nieuw','Interessant','Gesolliciteerd','Geen reactie','Afgewezen','Aanbieding'];
+
+const TonRow = ({ j, onUpdate, onDelete }) => {
+  const isNew = j.isNew;
+  return (
+    <tr style={{ borderBottom:"1px solid "+C.border, background:isNew?"#f0fdf4":"#fff", opacity:j.status==="Afgewezen"?0.5:1 }}>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:130 }}>
+        <EditCell value={j.company} onSave={v=>onUpdate(j.id,"company",v)} bold />
+        {isNew && <span style={{ fontSize:9, background:"#dcfce7", color:"#166534", border:"1px solid #86efac", borderRadius:4, padding:"1px 5px", marginTop:3, display:"inline-block" }}>NIEUW</span>}
+      </td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:140 }}>
+        <EditCell value={j.role} onSave={v=>onUpdate(j.id,"role",v)} />
+      </td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", width:140 }}>
+        <EditCell value={j.location} onSave={v=>onUpdate(j.id,"location",v)} placeholder="Locatie" />
+        <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>
+          <EditCell value={j.distance} onSave={v=>onUpdate(j.id,"distance",v)} placeholder="Rijafstand" />
+        </div>
+      </td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", width:100 }}>
+        <EditCell value={j.salary} onSave={v=>onUpdate(j.id,"salary",v)} placeholder="Salaris" />
+      </td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", width:130 }}>
+        <Sel value={j.status||"Nieuw"} opts={STATUSSEN_TON} onChange={v=>{ onUpdate(j.id,"status",v); if(v!=="Nieuw") onUpdate(j.id,"isNew",false); }} cf={s=>s==="Aanbieding"?"#10b981":s==="Gesolliciteerd"?"#6366f1":s==="Afgewezen"?"#9ca3af":s==="Geen reactie"?"#d97706":R} />
+      </td>
+      <td style={{ padding:"8px 10px", verticalAlign:"top", minWidth:180 }}>
+        <EditCell value={j.notes} onSave={v=>onUpdate(j.id,"notes",v)} multi placeholder="Notities..." />
+        {j.source && <a href={j.source} target="_blank" rel="noreferrer" style={{ fontSize:10, color:"#6366f1", display:"block", marginTop:4 }}>Vacature \u2197</a>}
+      </td>
+      <td style={{ padding:"8px 6px", verticalAlign:"top", width:70 }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+          {j.isNew && <button onClick={()=>onUpdate(j.id,"isNew",false)} style={{ background:"#f0fdf4", color:"#166534", border:"1px solid #86efac", borderRadius:4, padding:"3px 6px", cursor:"pointer", fontSize:9, fontWeight:700 }}>Gezien</button>}
+          <DeleteBtn onDelete={()=>onDelete(j.id)} />
+        </div>
+      </td>
+    </tr>
+  );
+};
+
+const TonTab = ({ data, onUpdate, onAdd, onDelete }) => {
+  const [q, setQ] = useState("");
+  const active = data.filter(j=>!["Afgewezen"].includes(j.status));
+  const done = data.filter(j=>j.status==="Afgewezen");
+  const filtered = active.filter(j=>!q||[j.company,j.role,j.location,j.notes].some(v=>(v||"").toLowerCase().includes(q.toLowerCase())));
+  const cols = ["BEDRIJF","FUNCTIE","LOCATIE / AFSTAND","SALARIS","STATUS","NOTITIES",""];
+  const Thead = () => (
+    <thead><tr style={{ borderBottom:"2px solid "+C.border, background:"#fafafa" }}>
+      {cols.map((h,i)=><th key={i} style={TH_STYLE}>{h}</th>)}
+    </tr></thead>
+  );
+  return (
+    <div style={{ padding:"16px 20px" }}>
+      <div style={{ marginBottom:12, padding:"10px 14px", background:"#fffbeb", border:"1px solid #fcd34d", borderRadius:8, fontSize:12, color:"#92400e" }}>
+        <strong>Ton van Overveld</strong> \u2014 Transportplanner \u00b7 Oosterhout \u00b7 Max 30 min rijden \u00b7 \u20ac4.500 bruto/mnd
+        <span style={{ marginLeft:8, fontSize:11, color:"#b45309" }}>Type "Run Ton Sweep" in Claude om nieuwe vacatures te zoeken</span>
+      </div>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Zoek vacatures..." style={{ border:"1px solid "+C.border, borderRadius:6, padding:"7px 12px", fontSize:12, flex:1, outline:"none" }} />
+        <button onClick={()=>onAdd()} style={{ background:R, color:"#fff", border:"none", borderRadius:6, padding:"7px 14px", cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>+ Toevoegen</button>
+      </div>
+      <div style={{ overflowX:"auto" }}>
+        <table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>
+          <Thead />
+          <tbody>
+            {filtered.length===0 && <tr><td colSpan={7} style={{ padding:20, textAlign:"center", color:C.muted, fontSize:12 }}>Nog geen vacatures. Typ "Run Ton Sweep" om te starten.</td></tr>}
+            {filtered.map(j=><TonRow key={j.id} j={j} onUpdate={onUpdate} onDelete={onDelete} />)}
+          </tbody>
+        </table>
+      </div>
+      {done.length>0 && (
+        <div style={{ marginTop:20, opacity:0.5 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.muted, marginBottom:6, textTransform:"uppercase" }}>Afgewezen ({done.length})</div>
+          <div style={{ overflowX:"auto" }}><table style={{ width:"100%", borderCollapse:"collapse", minWidth:860 }}>
+            <Thead /><tbody>{done.map(j=><TonRow key={j.id} j={j} onUpdate={onUpdate} onDelete={onDelete} />)}</tbody>
+          </table></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const LoginScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1269,6 +1383,7 @@ export default function App() {
   const [br, setBr]       = useState(SBr);
   const [fl, setFl]       = useState([]);
   const [ct, setCt]       = useState([]);
+  const [tonJobs, setTonJobs] = useState([]);
   const [pencils, setPencils] = useState([]);
   const [sweepDate, setSweepDate] = useState(null);
   const [crew, setCrew]   = useState(SCr);
@@ -1327,9 +1442,9 @@ export default function App() {
       try {
         // ── Load from Supabase ──────────────────────────────────────────────
         setLoadStatus("Loading your CRM from database...");
-        const [w,n,a,b,cr,f,c,sid,pen] = await Promise.all([
+        const [w,n,a,b,cr,f,c,sid,pen,ton] = await Promise.all([
           db.get("jw"), db.get("jn"), db.get("ja"), db.get("jb"),
-          db.get("jcr"), db.get("jf"), db.get("jc"), db.get("jsid"), db.get("jpen")
+          db.get("jcr"), db.get("jf"), db.get("jc"), db.get("jsid"), db.get("jpen"), db.get("jton")
         ]);
 
         const existAgNames=new Set((a&&a.length?a:[]).map(x=>(x.name||'').toLowerCase().trim()));
@@ -1419,7 +1534,7 @@ export default function App() {
           await Promise.all([db.set("jf",_baseFl),db.set("jc",_baseCt),db.set("jsid",SWEEP_ID)]);
           if (nFl.length+nCt.length>0) setMsg(nFl.length+" freelance + "+nCt.length+" contract jobs loaded from last sweep.");
         }
-        setFl(_baseFl); setCt(_baseCt);
+        setFl(_baseFl); setCt(_baseCt); setTonJobs(ton||[]);
         setLoadStatus("Ready.");
         // One-time migration: move old blob rows to row-per-entry format
         try {
@@ -1582,6 +1697,7 @@ export default function App() {
 
   const flNew = fl.filter((j) => j.isNew).length;
   const ctNew = ct.filter((j) => j.isNew).length;
+  const tonNew = tonJobs.filter((j) => j.isNew).length;
 
 
   const TABS = [
@@ -1592,6 +1708,7 @@ export default function App() {
     { id:"crew",      label:"Rolodex ("+crew.length+")" },
     { id:"freelance", label:"Freelance Jobs", badge:flNew },
     { id:"contract",  label:"Contract Jobs",  badge:ctNew },
+    { id:"ton",       label:"Ton",            badge:tonNew||null },
   ];
 
   if (!authChecked) return <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh" }}><div style={{ width:24, height:24, border:"2px solid #eee", borderTopColor:R, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} /></div>;
@@ -1765,7 +1882,8 @@ export default function App() {
         {tab==="crew"      && <CrewTab data={crew}  onUpdate={upd("jcr",setCrew)} onAdd={add(setCrew,"jcr",{name:"",specialty:"Motion Design",rate:"",email:"",website:"",location:"Amsterdam",notes:""})} onDelete={del("jcr",setCrew)} />}
         {tab==="freelance" && <JobsTab warmLeads={warm} data={fl}    onUpdate={upd("jf",setFl)}   onAdd={add(setFl,"jf",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Freelance"})} type="Freelance" onApply={applyJob("jf",setFl)} onUndo={undoApply("jf",setFl)} onPass={passJob("jf",setFl)} onClose={closeJob("jf",setFl)} onDelete={del("jf",setFl)} />}
         {tab==="contract"  && <JobsTab warmLeads={warm} data={ct}    onUpdate={upd("jc",setCt)}   onAdd={add(setCt,"jc",{company:"",role:"",location:"Amsterdam",sector:"",priority:"Medium",notes:"",source:"",date:nowStr(),status:"New",type:"Contract"})}  type="Contract"  onApply={applyJob("jc",setCt)} onUndo={undoApply("jc",setCt)} onPass={passJob("jc",setCt)} onClose={closeJob("jc",setCt)} onDelete={del("jc",setCt)} />}
-      </div>
+
+        {tab==="ton"       && <TonTab data={tonJobs} onUpdate={upd("jton",setTonJobs)} onAdd={add(setTonJobs,"jton",{company:"",role:"",location:"",distance:"",salary:"",status:"Nieuw",notes:"",source:"",date:nowStr(),isNew:true})} onDelete={del("jton",setTonJobs)} />}      </div>
 
 
       {/* Export modal */}
