@@ -1404,7 +1404,7 @@ export default function App() {
   const showApp = (id) => setHiddenApps(prev => { const next=new Set(prev); next.delete(id); localStorage.setItem('hiddenApps',JSON.stringify([...next])); return next; });
   const [pencils, setPencils] = useState([]);
   const [sweepDate, setSweepDate] = useState(null);
-  const [crew, setCrew]   = useState([]);
+  const [crew, setCrew]   = useState(SCr);
   const [tab, setTab]     = useState("overview");
   const [msg, setMsg]     = useState(null);
   const [globalQ, setGlobalQ] = useState("");
@@ -1490,10 +1490,10 @@ export default function App() {
         const closedAgUpdates={"ddb amsterdam":{status:"Closed",notes:"Merged into TBWA\\NEBOKO December 2025. Brand retired. Reach out to TBWA\\NEBOKO instead."},"fcb amsterdam":{status:"Closed",notes:"Merging into BBDO Amsterdam H1 2026 per Omnicom restructure. Brand retired."},"glassworks amsterdam":{status:"Closed",notes:"CLOSED: Bankrupt April 2025, fully liquidated August 2025."},"the mill amsterdam":{status:"Closed",notes:"CLOSED: Parent Technicolor shut down February 2025. All offices closed."},"kesselskramer":{status:"Closed",notes:"BANKRUPT June 2026 \u2014 3 major clients dropped. Curator investigating restart. Do not reach out now."}};
         const hasAgUpd=loadedAg.some(a=>agMigrations[(a.name||'').toLowerCase()]);
         const loadedAgFinal=hasAgUpd?loadedAg.map(a=>{const u=agMigrations[(a.name||'').toLowerCase()];return u?{...a,...u}:a;}):loadedAg;
-        setAg(loadedAgFinal); if(!a||!a.length||freshAgFromSeed.length||hasAgUpd)db.set("ja",loadedAgFinal);
-        setBr(loadedBr); if(!b||!b.length)db.set("jb",loadedBr);
+        setAg(loadedAgFinal); if(a&&a.length&&(freshAgFromSeed.length||hasAgUpd))db.set("ja",loadedAgFinal); // only write when Supabase had real data
+        setBr(loadedBr); if(b&&b.length&&loadedBr!==SBr)db.set("jb",loadedBr); // seed is display-only fallback
         if(pen&&pen.length) setPencils(pen);
-        setCrew(cr&&cr.length ? cr : SCr); // seed is display-only fallback — NEVER written to Supabase
+        if (cr&&cr.length) setCrew(cr); else { setCrew(SCr); db.set("jcr", SCr); }
 
         let baseFl = f || [], baseCt = c || [];
 
