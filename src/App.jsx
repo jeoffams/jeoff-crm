@@ -1213,32 +1213,45 @@ const JobsTab = ({ data, onUpdate, onAdd, type, onApply, onUndo, onPass, onClose
 // Ton: Transportplanner 20+ jaar ervaring autotransport/distributie, woont Oosterhout (4904 XK)
 //
 // CRITERIA:
-//   - Max 30 min rijden vanaf Oosterhout — check altijd rijafstand
+//   - Primair: max 30 min rijden vanaf Oosterhout. ZACHTE UITZONDERING: 30-45 min toegestaan
+//     als de rol en het salaris een perfecte match zijn — altijd duidelijk markeren met ⚠️
 //   - Salaris: €4.500 bruto/maand (~€54.000/jaar), vast dienstverband
-//   - Voorkeur: fulltime (f_JT=F), maar parttime bespreekbaar
-//   - Sector: transport, logistiek, distributie, automotive, fleet
+//   - Voorkeur: fulltime, parttime (32+ uur) ook bespreekbaar
+//   - Sector: transport, logistiek, distributie, automotive, fleet, expeditie
 //
-// GEZOCHTE FUNCTIES (gebruik combinaties):
-//   Batch A: transportplanner OR "planner autotransport" OR "service planner" OR personeelsplanner
-//   Batch B: "logistiek planner" OR "fleet planner" OR distributieplanner OR wagenparkbeheerder
-//   Batch C: planner transport OR "planning coordinator" OR "transport coordinator"
+// GEZOCHTE FUNCTIES:
+//   transportplanner, planner autotransport, expediteur/planner, service planner,
+//   personeelsplanner, logistiek planner, fleet planner, distributieplanner,
+//   transportcoordinator, planning coordinator, logistics coordinator
 //
-// LOCATIES (gebruik altijd location= + geoId= om AI redirect te omzeilen):
-//   Breda:    location=Breda%2C+Noord-Brabant%2C+Netherlands&geoId=104929178
-//   Tilburg:  location=Tilburg%2C+Noord-Brabant%2C+Netherlands&geoId=102648087
-//   Roosendaal: location=Roosendaal%2C+Noord-Brabant%2C+Netherlands&geoId=102617154
-//   Dordrecht: location=Dordrecht%2C+Zuid-Holland%2C+Netherlands&geoId=102052649
-//   Waalwijk: zoek ook in Waalwijk (Midden-Brabant)
-//   Also try: geoId=102902977 (Noord-Brabant province) for broader search
+// ⚠️  LINKEDIN WERKT NIET voor deze zoekopdrachten:
+//   - LinkedIn toont Jeoffs Amsterdam creative-profiel advertenties boven alle resultaten
+//   - Organische NL transport vacatures in Noord-Brabant zijn vrijwel afwezig op LinkedIn
+//   - Nederlandse werkgevers in transport/logistiek plaatsen NIET op LinkedIn
+//   - LinkedIn overslaan voor Ton Sweep
 //
-// SKIP: Amsterdam, Rotterdam city center, >40km van Oosterhout, junior, stage, ZZP-only
+// PRIMAIRE BRONNEN (altijd deze volgorde):
 //
-// URL TEMPLATE:
-//   https://linkedin.com/jobs/search/?keywords=[term]&location=Breda%2C+Noord-Brabant%2C+Netherlands&geoId=104929178&f_TPR=r2592000&f_JT=F&sortBy=DD
-//   (f_TPR=r2592000 = afgelopen 4 weken, f_JT=F = fulltime)
+//   1. NATIONALE VACATUREBANK (beste bron - bevestigd 37 resultaten):
+//      URL: https://www.nationalevacaturebank.nl/vacature/zoeken?query=transportplanner&distance=30&location=Oosterhout&sortBy=date
+//      Variaties: distance=30, distance=40 (voor zachte uitzondering check)
+//      Ook proberen: query=planner+transport, query=expediteur+planner, query=logistiek+planner
+//
+//   2. MONSTERBOARD:
+//      URL: https://www.monsterboard.nl/vacatures/zoeken?q=transportplanner&where=Oosterhout&distance=30&sort=Date
+//
+//   3. JOBBIRD:
+//      URL: https://www.jobbird.com/nl/vacature?q=transportplanner&l=Oosterhout&r=30&s=date
+//
+//   4. INDEED NL (via browser, accepteer cookies eerst):
+//      URL: https://nl.indeed.com/jobs?q=transportplanner&l=Oosterhout&radius=30&sort=date
+//
+// SKIP: Amsterdam, Rotterdam centrum, >45km van Oosterhout, junior, stage, ZZP-only,
+//       marketing/sales planner, productie-planner in andere sectoren
 //
 // SCHRIJF naar Supabase: key prefix 'jton_entry_{id}', isNew:true
-// RAPPORTEER in chat: bedrijf, functie, locatie, rijafstand vanaf Oosterhout, salaris indien vermeld
+// RAPPORTEER: bedrijf, functie, locatie, rijafstand vanaf Oosterhout 4904 XK, salaris
+// AFSTANDSCHECK: gebruik Google Maps rijafstand vanaf Oosterhout voor elke vacature
 // ────────────────────────────────────────────────────────────────────────────────
 
 const STATUSSEN_TON = ['Nieuw','Interessant','Gesolliciteerd','Geen reactie','Afgewezen','Aanbieding'];
