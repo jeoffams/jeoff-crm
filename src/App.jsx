@@ -450,7 +450,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, onPencilChan
   }).slice(0,6);
   const pipeData = ["Radar","Reached out to me","Replied","Won"].map((s) => ({ name:s, v:warm.filter((w) => w.stage===s).length }));
   const allJobs = [...fl, ...ct];
-  const appliedJobs = allJobs.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New"));
+  const appliedJobs = allJobs.filter((j) => ["Applied","No Response","Conversation","Offer","Rejected"].includes(j.status||"New") && !hiddenApps.has(j.id));
   const appData = ["Applied","No Response","Conversation","Offer","Rejected"].map((s) => ({ name:s, v:appliedJobs.filter((j) => j.status===s).length })).filter((d) => d.v>0);
   const newJobs = fl.filter((j) => j.isNew).length + ct.filter((j) => j.isNew).length;
   const curYear = new Date().getFullYear();
@@ -542,6 +542,9 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, onPencilChan
             <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{s.sub}</div>
           </div>
         ))}
+        <button onClick={()=>{ const next=!showTon; setShowTon(next); localStorage.setItem('showTon',String(next)); if(!next&&tab==='ton') setTab('warm'); }} title={showTon?"Verberg Ton tab":"Toon Ton tab"} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:showTon?C.muted:"#6366f1", padding:"4px 8px", marginLeft:2, flexShrink:0, fontWeight:600, alignSelf:"center" }}>
+          {showTon ? "Ton ×" : "Ton +"}
+        </button>
       </div>
 
       {stale.length > 0 && (
@@ -604,7 +607,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, onPencilChan
         </div>
 
         <div style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:8, padding:16, overflow:"hidden" }}>
-          <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:12 }}>Applications ({appliedJobs.length})</div>
+          <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:12 }}>Applications ({appliedJobs.length}){hiddenApps.size>0&&<button onClick={()=>{hiddenApps.forEach(id=>showApp(id));}} style={{marginLeft:8,background:"none",border:"none",cursor:"pointer",fontSize:10,color:"#6366f1",textDecoration:"underline"}}>show hidden ({hiddenApps.size})</button>}</div>
           {appliedJobs.length === 0 && <div style={{ fontSize:12, color:C.muted }}>No applications yet. Hit Applied on a job.</div>}
           {appliedJobs.map((j) => {
             const sc = j.status==="Conversation"||j.status==="Offer" ? "#059669" : j.status==="No Response" ? "#d97706" : j.status==="Passed"||j.status==="Rejected" ? C.muted : "#2563eb";
@@ -622,6 +625,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, onPencilChan
                   </div>
                   <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3, flexShrink:0 }}>
                     <span style={{ fontSize:9, fontWeight:700, color:sc, background:sc+"18", borderRadius:3, padding:"1px 5px", whiteSpace:"nowrap" }}>{j.status}</span>
+                    <button onClick={()=>hideApp(j.id)} title="Verberg uit overzicht" style={{ background:"none", border:"none", cursor:"pointer", fontSize:13, color:C.muted, padding:"0 3px", lineHeight:1, flexShrink:0, marginLeft:2 }}>×</button>
                     <span style={{ fontSize:9, color:C.muted }}>{j.appliedDate||j.date||"—"}</span>
                   </div>
                 </div>
@@ -1397,6 +1401,10 @@ export default function App() {
   const [fl, setFl]       = useState([]);
   const [ct, setCt]       = useState([]);
   const [tonJobs, setTonJobs] = useState([]);
+  const [showTon, setShowTon] = useState(() => localStorage.getItem('showTon') !== 'false');
+  const [hiddenApps, setHiddenApps] = useState(() => new Set(JSON.parse(localStorage.getItem('hiddenApps')||'[]')));
+  const hideApp = (id) => setHiddenApps(prev => { const next=new Set(prev); next.add(id); localStorage.setItem('hiddenApps',JSON.stringify([...next])); return next; });
+  const showApp = (id) => setHiddenApps(prev => { const next=new Set(prev); next.delete(id); localStorage.setItem('hiddenApps',JSON.stringify([...next])); return next; });
   const [pencils, setPencils] = useState([]);
   const [sweepDate, setSweepDate] = useState(null);
   const [crew, setCrew]   = useState(SCr);
@@ -1721,7 +1729,7 @@ export default function App() {
     { id:"crew",      label:"Rolodex ("+crew.length+")" },
     { id:"freelance", label:"Freelance Jobs", badge:flNew },
     { id:"contract",  label:"Contract Jobs",  badge:ctNew },
-    { id:"ton",       label:"Ton",            badge:tonNew||null },
+    ...(showTon ? [{ id:"ton", label:"Ton", badge:tonNew||null }] : []),
   ];
 
   if (!authChecked) return <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh" }}><div style={{ width:24, height:24, border:"2px solid #eee", borderTopColor:R, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} /></div>;
