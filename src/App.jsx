@@ -425,7 +425,7 @@ const GlobalSearch = ({ q, warm, newL, ag, br, crew, fl, ct, onGo }) => {
 };
 
 // ── Overview ──────────────────────────────────────────────────────────────────
-const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, onPencilChange, onGoToWarm }) => {
+const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, hiddenApps, hideApp, showApp, onPencilChange, onGoToWarm }) => {
   // Sweep overdue check
   const parseSweepDate = (sid) => { if(!sid) return null; const p=(sid.split("-")[0]||"").split("/"); if(p.length!==3) return null; return new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); };
   const sweepDt = parseSweepDate(sweepDate);
@@ -1867,7 +1867,7 @@ export default function App() {
 
       {/* Content */}
       <div className="content-wrap" style={{ maxWidth:1600, margin:"0 auto", paddingTop:20 }}>
-        {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} pencils={pencils} sweepDate={sweepDate} onPencilChange={(p)=>{ setPencils(p); db.set("jpen",p); }} onGoToWarm={()=>setTab("warm")} />}
+        {tab==="overview"  && <Overview warm={warm} newL={newL} ag={ag} br={br} fl={fl} ct={ct} pencils={pencils} sweepDate={sweepDate} hiddenApps={hiddenApps} hideApp={hideApp} showApp={showApp} onPencilChange={(p)=>{ setPencils(p); db.set("jpen",p); }} onGoToWarm={()=>setTab("warm")} />}
         {tab==="warm"      && <WarmTab leads={warm} onUpdate={upd("jw",setWarm)} onStageChange={warmStageChange} onAdd={add(setWarm,"jw",{name:"",role:"",company:"",email:"",tier:"A – Agency",stage:"Radar",lastContact:"",nextActionDate:"",nextAction:"",notes:""})} onDelete={del("jw",setWarm)} onArchive={archiveToLeads} />}
         
         {tab==="agencies"  && <AgTab   data={ag}    onUpdate={updAgAndWarm}   onAdd={(extra={}) => {
