@@ -542,9 +542,6 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, hiddenApps, 
             <div style={{ fontSize:10, color:C.muted, marginTop:2 }}>{s.sub}</div>
           </div>
         ))}
-        <button onClick={()=>{ const next=!showTon; setShowTon(next); localStorage.setItem('showTon',String(next)); if(!next&&tab==='ton') setTab('warm'); }} title={showTon?"Verberg Ton tab":"Toon Ton tab"} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:showTon?C.muted:"#6366f1", padding:"4px 8px", marginLeft:2, flexShrink:0, fontWeight:600, alignSelf:"center" }}>
-          {showTon ? "Ton ×" : "Ton +"}
-        </button>
       </div>
 
       {stale.length > 0 && (
@@ -1863,6 +1860,9 @@ export default function App() {
             {t.badge>0 && <span style={{ background:R, color:"#fff", borderRadius:8, padding:"1px 5px", fontSize:9, fontWeight:700 }}>{t.badge}</span>}
           </button>
         ))}
+        <button onClick={()=>{ const next=!showTon; setShowTon(next); localStorage.setItem('showTon',String(next)); if(!next&&tab==='ton') setTab('warm'); }} title={showTon?"Verberg Ton tab":"Toon Ton tab"} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:showTon?C.muted:"#6366f1", padding:"4px 8px", marginLeft:4, flexShrink:0, fontWeight:600, alignSelf:"center" }}>
+          {showTon ? "Ton ×" : "Ton +"}
+        </button>
       </div>
 
       {/* Content */}
