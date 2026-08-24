@@ -1404,7 +1404,7 @@ export default function App() {
   const showApp = (id) => setHiddenApps(prev => { const next=new Set(prev); next.delete(id); localStorage.setItem('hiddenApps',JSON.stringify([...next])); return next; });
   const [pencils, setPencils] = useState([]);
   const [sweepDate, setSweepDate] = useState(null);
-  const [crew, setCrew]   = useState(SCr);
+  const [crew, setCrew]   = useState([]);
   const [tab, setTab]     = useState("overview");
   const [msg, setMsg]     = useState(null);
   const [globalQ, setGlobalQ] = useState("");
@@ -1493,7 +1493,7 @@ export default function App() {
         setAg(loadedAgFinal); if(!a||!a.length||freshAgFromSeed.length||hasAgUpd)db.set("ja",loadedAgFinal);
         setBr(loadedBr); if(!b||!b.length)db.set("jb",loadedBr);
         if(pen&&pen.length) setPencils(pen);
-        if (cr&&cr.length) setCrew(cr); else { setCrew(SCr); db.set("jcr", SCr); }
+        setCrew(cr&&cr.length ? cr : SCr); // seed is display-only fallback — NEVER written to Supabase
 
         let baseFl = f || [], baseCt = c || [];
 
