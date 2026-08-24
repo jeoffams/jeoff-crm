@@ -13,7 +13,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey)
 // db.set(tab, array)     → smart bulk: upserts all, deletes removed (used for bulk ops)
 // db.get(tab)            → reads all matching rows and returns as array
 
-const ARRAY_KEYS = new Set(['jw','ja','jb','jcr','jf','jc','jpen'])
+const ARRAY_KEYS = new Set(['jw','ja','jb','jcr','jf','jc','jpen','jton'])
 const eKey = (tab, id) => tab + '_entry_' + id
 const ePfx = (tab) => tab + '_entry_'
 
