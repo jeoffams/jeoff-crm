@@ -790,7 +790,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, hiddenApps, 
             </div>
           </div>
         )}
-          <HourCalc pencils={pencils} yr={yr} />
+          {!hiddenYears.includes(yr) && <HourCalc pencils={pencils} yr={yr} />}
           </div>
           );
         })}
