@@ -657,6 +657,7 @@ const Overview = ({ warm, newL, ag, br, fl, ct, pencils, sweepDate, hiddenApps, 
         </div>
       )}
       {/* ── Current Availability ────────────────────────────────────────────────────── */}
+      <HourCalc pencils={pencils} />
       <div style={{ marginTop:20 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
           <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"'Lora',serif" }}>Bookings {'&'} Pencils</div>
@@ -1336,6 +1337,99 @@ const TonTab = ({ data, onUpdate, onAdd, onDelete }) => {
   );
 };
 
+// ── HOUR CALCULATOR ──────────────────────────────────────────────────────────
+const parseHourDate = (s) => {
+  if(!s) return null;
+  const p = s.trim().split('/');
+  if(p.length!==3) return null;
+  try { return new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); }
+  catch(e){ return null; }
+};
+const workingDaysInRange = (start, end, yr) => {
+  const days = new Set();
+  let d = new Date(Math.max(start.getTime(), new Date(yr,0,1).getTime()));
+  const bound = new Date(Math.min(end.getTime(), new Date(yr,11,31,23,59,59).getTime()));
+  while(d <= bound){
+    if(d.getFullYear()===yr && d.getDay()!==0 && d.getDay()!==6)
+      days.add(d.toISOString().split('T')[0]);
+    d.setDate(d.getDate()+1);
+  }
+  return days;
+};
+const downloadUren = (pencils) => {
+  const yr = new Date().getFullYear();
+  const parse = s => parseHourDate(s);
+  const wdRange = (s,e) => { const days=[]; let d=new Date(s); while(d<=e){ if(d.getFullYear()===yr&&d.getDay()!==0&&d.getDay()!==6) days.push(d.toISOString().split('T')[0]); d.setDate(d.getDate()+1); } return days; };
+  const bookings = pencils.filter(p=>p.type==='Booking');
+  const timeoff = pencils.filter(p=>p.type==='Time Off');
+  const allDays = new Set();
+  bookings.forEach(b=>{ const s=parse(b.startDate),e=parse(b.endDate); if(s&&e) wdRange(s,e).forEach(d=>allDays.add(d)); });
+  const totalHours = allDays.size * 8;
+  const pad = (str,n) => String(str||'').padEnd(n);
+  const line = (n) => '-'.repeat(n);
+  const lines = [
+    `URENREGISTRATIE ${yr} \u2014 Jeoffrey van Overveld`,
+    `jeoff.nl | hello@jeoff.nl | +31 6 3978 0310`,
+    '='.repeat(60),
+    '',
+    'OPDRACHTEN:',
+    pad('Opdrachtgever',28)+pad('Van',12)+pad('Tot',12)+pad('Dagen',8)+'Uren',
+    line(62),
+    ...bookings.map(b => {
+      const s=parse(b.startDate),e=parse(b.endDate);
+      const days=(s&&e)?wdRange(s,e).length:0;
+      return pad(b.company||'',28)+pad(b.startDate,12)+pad(b.endDate,12)+pad(days,8)+(days*8)+'u';
+    }),
+    '',
+    'VRIJE PERIODES:',
+    pad('Omschrijving',32)+pad('Van',12)+'Tot',
+    line(56),
+    ...timeoff.sort((a,b)=>(parseHourDate(a.startDate)||0)-(parseHourDate(b.startDate)||0)).map(t=>pad(t.company||'',32)+pad(t.startDate||'',12)+(t.endDate||'')),
+    '',
+    '='.repeat(60),
+    `TOTAAL ${yr}`,
+    `Geboekte werkdagen : ${allDays.size} (overlap niet dubbel geteld)`,
+    `Gewerkte uren      : ${totalHours}`,
+    `Urencriterium 1225 : ${totalHours>=1225?'\u2713 GEHAALD ('+totalHours+'/1225)':'\u2717 '+totalHours+'/1225 \u2014 nog '+(1225-totalHours)+' uur te gaan'}`,
+  ];
+  const blob = new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=`urenregistratie-${yr}.txt`; a.click();
+  URL.revokeObjectURL(url);
+};
+const HourCalc = ({ pencils }) => {
+  const yr = new Date().getFullYear();
+  const TARGET = 1225;
+  const bookings = (pencils||[]).filter(p=>p.type==='Booking');
+  const allWorkedDays = new Set();
+  bookings.forEach(b=>{ const s=parseHourDate(b.startDate),e=parseHourDate(b.endDate); if(s&&e) workingDaysInRange(s,e,yr).forEach(d=>allWorkedDays.add(d)); });
+  const totalHours = allWorkedDays.size * 8;
+  const pct = Math.min(100, Math.round(totalHours/TARGET*100));
+  const barCol = totalHours>=TARGET?'#10b981':totalHours>=900?'#f59e0b':'#ef4444';
+  return (
+    <div style={{ background:'#fff', border:'1px solid '+C.border, borderRadius:8, padding:'14px 16px', marginBottom:16 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
+        <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"'Lora',serif" }}>Urencriterium {yr}</div>
+        <div style={{ fontSize:12, fontWeight:700, color:barCol }}>{totalHours}u / {TARGET}u</div>
+      </div>
+      <div style={{ height:8, background:C.border, borderRadius:4, overflow:'hidden', marginBottom:10 }}>
+        <div style={{ height:'100%', width:pct+'%', background:barCol, borderRadius:4, transition:'width 0.4s' }} />
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+        {bookings.map(b=>{ const s=parseHourDate(b.startDate),e=parseHourDate(b.endDate); const days=(s&&e)?workingDaysInRange(s,e,yr).size:0; return (
+          <div key={b.id} style={{ display:'flex', justifyContent:'space-between', fontSize:11 }}>
+            <span style={{ color:C.muted }}><span style={{ fontWeight:600, color:C.text }}>{b.company}</span>{' '}<span style={{ fontSize:10 }}>{b.startDate} \u2192 {b.endDate}</span></span>
+            <span style={{ fontWeight:700, color:barCol }}>{days*8}u</span>
+          </div>
+        );})}
+        {bookings.length===0 && <div style={{ fontSize:11, color:C.muted }}>Geen boekingen in {yr}</div>}
+      </div>
+      <div style={{ marginTop:8, fontSize:10, color:C.muted, textAlign:'right' }}>{pct}% van {TARGET}u{totalHours>=TARGET?' \u2713':''}</div>
+    </div>
+  );
+};
+
+
 const LoginScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1794,6 +1888,10 @@ export default function App() {
           <button onClick={async()=>{ try{ const res=await fetch("/api/backup?secret=jeoff-backup-2026"); if(!res.ok){alert("Backup failed: "+res.status);return;} const blob=await res.blob(); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="jeoff-crm-backup-"+new Date().toISOString().slice(0,10)+".json"; a.click(); URL.revokeObjectURL(url); }catch(e){alert("Backup error: "+e.message);} }} title="Download database backup" style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", cursor:"pointer", fontSize:11, fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Backup
+            </button>
+            <button onClick={()=>downloadUren(pencils)} title="Download urenregistratie" style={{ display:"flex", alignItems:"center", gap:4, background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:5, padding:"5px 10px", cursor:"pointer", fontSize:11, fontWeight:700 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Uren
             </button>
             <label title="Restore from backup JSON" style={{ background:"#fff", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, padding:"7px 12px", cursor:"pointer", fontSize:11, fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
               <input type="file" accept=".json" style={{ display:"none" }} onChange={async(e)=>{
