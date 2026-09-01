@@ -1398,33 +1398,48 @@ const downloadUren = (pencils, yr) => {
   URL.revokeObjectURL(url);
 };
 const HourCalc = ({ pencils }) => {
-  const yr = new Date().getFullYear();
+  const curYr = new Date().getFullYear();
   const TARGET = 1225;
+  const allYears = [...new Set((pencils||[]).map(p=>p.year||curYr))].sort((a,b)=>b-a);
+  const [selYr, setSelYr] = useState(curYr);
+  const yr = allYears.includes(selYr) ? selYr : (allYears[0]||curYr);
   const bookings = (pencils||[]).filter(p=>p.type==='Booking');
   const allWorkedDays = new Set();
   bookings.forEach(b=>{ const s=parseHourDate(b.startDate),e=parseHourDate(b.endDate); if(s&&e) workingDaysInRange(s,e,yr).forEach(d=>allWorkedDays.add(d)); });
   const totalHours = allWorkedDays.size * 8;
   const pct = Math.min(100, Math.round(totalHours/TARGET*100));
   const barCol = totalHours>=TARGET?'#10b981':totalHours>=900?'#f59e0b':'#ef4444';
+  const yrBookings = bookings.filter(b=>{ const s=parseHourDate(b.startDate),e=parseHourDate(b.endDate); return s&&e&&(s.getFullYear()===yr||e.getFullYear()===yr); });
   return (
     <div style={{ background:'#fff', border:'1px solid '+C.border, borderRadius:8, padding:'14px 16px', marginBottom:16 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
-        <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"'Lora',serif" }}>Urencriterium {yr}</div>
-        <div style={{ fontSize:12, fontWeight:700, color:barCol }}>{totalHours}u / {TARGET}u</div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"'Lora',serif" }}>Hours {yr}</div>
+          {allYears.length>1 && <select value={yr} onChange={e=>setSelYr(parseInt(e.target.value))} style={{ fontSize:11, border:'1px solid '+C.border, borderRadius:4, padding:'2px 5px', color:C.text, background:'#fafafa', cursor:'pointer' }}>
+            {allYears.map(y=><option key={y} value={y}>{y}</option>)}
+          </select>}
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:barCol }}>{totalHours}h / {TARGET}h</div>
+          <button onClick={()=>downloadUren(pencils,yr)} title={'Download hours '+yr} style={{ background:'none', border:'1px solid '+C.border, borderRadius:4, padding:'3px 8px', cursor:'pointer', fontSize:10, color:C.muted, display:'flex', alignItems:'center', gap:3 }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            .txt
+          </button>
+        </div>
       </div>
       <div style={{ height:8, background:C.border, borderRadius:4, overflow:'hidden', marginBottom:10 }}>
         <div style={{ height:'100%', width:pct+'%', background:barCol, borderRadius:4, transition:'width 0.4s' }} />
       </div>
       <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-        {bookings.map(b=>{ const s=parseHourDate(b.startDate),e=parseHourDate(b.endDate); const days=(s&&e)?workingDaysInRange(s,e,yr).size:0; return (
+        {yrBookings.map(b=>{ const s=parseHourDate(b.startDate),e=parseHourDate(b.endDate); const days=(s&&e)?workingDaysInRange(s,e,yr).size:0; return (
           <div key={b.id} style={{ display:'flex', justifyContent:'space-between', fontSize:11 }}>
-            <span style={{ color:C.muted }}><span style={{ fontWeight:600, color:C.text }}>{b.company}</span>{' '}<span style={{ fontSize:10 }}>{b.startDate} \u2192 {b.endDate}</span></span>
-            <span style={{ fontWeight:700, color:barCol }}>{days*8}u</span>
+            <span><span style={{ fontWeight:600, color:C.text }}>{b.company}</span>{' '}<span style={{ fontSize:10, color:C.muted }}>{b.startDate} → {b.endDate}</span></span>
+            <span style={{ fontWeight:700, color:barCol }}>{days*8}h</span>
           </div>
         );})}
-        {bookings.length===0 && <div style={{ fontSize:11, color:C.muted }}>Geen boekingen in {yr}</div>}
+        {yrBookings.length===0 && <div style={{ fontSize:11, color:C.muted }}>No bookings in {yr}</div>}
       </div>
-      <div style={{ marginTop:8, fontSize:10, color:C.muted, textAlign:'right' }}>{pct}% van {TARGET}u{totalHours>=TARGET?' \u2713':''}</div>
+      <div style={{ marginTop:8, fontSize:10, color:C.muted, textAlign:'right' }}>{pct}% of {TARGET}h{totalHours>=TARGET?' ✓':''}</div>
     </div>
   );
 };
